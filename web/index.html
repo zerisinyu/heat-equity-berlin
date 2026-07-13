@@ -1,105 +1,279 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>柏林热浪不平等地图 · Hitzevorsorge Berlin</title>
+<title>Berlin Heat Equity Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
   :root {
-    --panel-bg: rgba(255,255,255,.96); --ink: #1a1a1a; --muted: #666;
-    --accent: #0b6e6e;
+    --surface: rgba(252, 252, 251, .94);
+    --surface-solid: #fcfcfb;
+    --ink: #191817;
+    --ink-2: #52514e;
+    --ink-3: #8a887f;
+    --line: rgba(25, 24, 23, .09);
+    --accent: #0e7a6e;
+    --accent-soft: rgba(14, 122, 110, .09);
+    --danger: #9a3412;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20, 18, 12, .05), 0 8px 28px rgba(20, 18, 12, .13);
+    --exposure: #d94f2b;
+    --sensitivity: #6d5fc4;
+    --capacity: #0e7a6e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: rgba(26, 26, 25, .93);
+      --surface-solid: #1f1f1e;
+      --ink: #f3f2ee;
+      --ink-2: #c3c2b7;
+      --ink-3: #8a887f;
+      --line: rgba(243, 242, 238, .1);
+      --accent: #35b3a2;
+      --accent-soft: rgba(53, 179, 162, .14);
+      --danger: #f0a082;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 32px rgba(0, 0, 0, .5);
+      --exposure: #e8734f;
+      --sensitivity: #988ce0;
+      --capacity: #35b3a2;
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.45 -apple-system, "Segoe UI", "Noto Sans SC", sans-serif; color: var(--ink); }
-  #map { position: absolute; inset: 0; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink);
+    font: 400 13.5px/1.5 "Inter", -apple-system, "Segoe UI", sans-serif;
+    font-feature-settings: "cv05", "cv11";
+  }
+  #map { position: absolute; inset: 0; background: #e8e6e1; }
 
   .panel {
-    position: absolute; z-index: 5; background: var(--panel-bg);
-    border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.18); padding: 12px 14px;
+    position: absolute; z-index: 5;
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
-  #controls { top: 12px; left: 12px; width: 300px; max-height: calc(100% - 24px); overflow-y: auto; }
-  #controls h1 { font-size: 17px; margin: 0 0 2px; }
-  #controls .sub { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
 
-  .metric-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-  .metric-btns button {
-    padding: 7px 6px; border: 1px solid #ccc; border-radius: 7px; background: #fff;
-    cursor: pointer; font-size: 12.5px; text-align: left;
+  /* ---------- left: controls ---------- */
+  #controls {
+    top: 16px; left: 16px; width: 316px;
+    max-height: calc(100% - 32px); overflow-y: auto;
+    padding: 18px 18px 14px;
   }
-  .metric-btns button.active { border-color: var(--accent); background: #e8f4f4; font-weight: 600; }
+  #controls::-webkit-scrollbar { width: 0; }
 
-  .toggles label { display: flex; align-items: center; gap: 7px; padding: 3px 0; cursor: pointer; font-size: 13px; }
-  .legend { margin-top: 10px; font-size: 12px; }
-  .legend .row { display: flex; align-items: center; gap: 7px; padding: 1.5px 0; }
-  .legend .swatch { width: 22px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.15); flex: none; }
-  .legend .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; border: 1.5px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,.5); }
+  .brand h1 {
+    font: 600 21px/1.15 "Fraunces", Georgia, serif;
+    letter-spacing: -.01em; margin: 0 0 4px;
+  }
+  .brand p { margin: 0 0 16px; color: var(--ink-2); font-size: 12.5px; }
 
-  #detail { top: 12px; right: 12px; width: 330px; max-height: calc(100% - 24px); overflow-y: auto; display: none; }
-  #detail h2 { font-size: 15px; margin: 0 0 2px; }
-  #detail .close { position: absolute; top: 8px; right: 11px; cursor: pointer; border: none; background: none; font-size: 17px; color: var(--muted); }
-  .dim { margin: 9px 0; }
-  .dim .name { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 3px; }
-  .bar { height: 9px; background: #eee; border-radius: 5px; overflow: hidden; }
-  .bar > div { height: 100%; border-radius: 5px; }
-  .facts { margin-top: 10px; border-top: 1px solid #e2e2e2; padding-top: 8px; font-size: 12.5px; }
-  .facts div { display: flex; justify-content: space-between; padding: 1.5px 0; }
-  .facts .v { font-variant-numeric: tabular-nums; color: #333; }
-  .badge { display: inline-block; background: #7a2e0e; color: #fff; border-radius: 5px; padding: 2px 7px; font-size: 11.5px; margin-top: 6px; }
-  .note { color: var(--muted); font-size: 11.5px; margin-top: 10px; border-top: 1px solid #e2e2e2; padding-top: 8px; }
+  .label {
+    font: 600 10.5px/1 "Inter", sans-serif; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px;
+  }
+
+  .seg { display: flex; flex-direction: column; gap: 3px; margin-bottom: 18px; }
+  .seg button {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border: 0; border-radius: 9px;
+    background: transparent; color: var(--ink-2);
+    font: 500 13px/1.2 "Inter", sans-serif; text-align: left; cursor: pointer;
+    transition: background .12s;
+  }
+  .seg button:hover { background: var(--line); }
+  .seg button.active { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .seg .swatch-dot {
+    width: 9px; height: 9px; border-radius: 3px; flex: none;
+    background: var(--dot, var(--ink-3));
+  }
+  .seg small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11px; }
+
+  .toggles { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
+  .toggles label {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px; border-radius: 9px; cursor: pointer; font-size: 13px;
+  }
+  .toggles label:hover { background: var(--line); }
+  .toggles input { display: none; }
+  .switch {
+    width: 30px; height: 18px; border-radius: 9px; flex: none;
+    background: var(--line); position: relative; transition: background .15s;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--surface-solid); box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    transition: transform .15s;
+  }
+  input:checked + .switch { background: var(--accent); }
+  input:checked + .switch::after { transform: translateX(12px); }
+  .toggles .glyph { width: 15px; text-align: center; flex: none; }
+
+  /* legend */
+  .legend { border-top: 1px solid var(--line); padding-top: 14px; }
+  .legend-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 2px 0 5px; }
+  .legend-bar span { flex: 1; }
+  .legend-ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-2); padding: 2px 0; }
+  .legend-row .chip { width: 18px; height: 10px; border-radius: 3px; flex: none; border: 1px solid var(--line); }
+  .legend-row .pt { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px var(--surface-solid), 0 0 3px rgba(0,0,0,.4); }
+
+  details { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+  summary {
+    cursor: pointer; font-size: 12px; font-weight: 500; color: var(--ink-3);
+    list-style: none; display: flex; align-items: center; gap: 6px;
+  }
+  summary::before { content: "›"; transition: transform .15s; font-size: 14px; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details .body { color: var(--ink-2); font-size: 12px; padding: 8px 0 2px; }
+  details .body b { color: var(--ink); }
+
+  /* ---------- right: detail ---------- */
+  #detail {
+    top: 16px; right: 16px; width: 340px;
+    max-height: calc(100% - 32px); overflow-y: auto;
+    padding: 18px; display: none;
+  }
+  #detail::-webkit-scrollbar { width: 0; }
+  #detail .close {
+    position: absolute; top: 10px; right: 10px; width: 26px; height: 26px;
+    border: 0; border-radius: 8px; background: transparent; color: var(--ink-3);
+    font-size: 15px; cursor: pointer; line-height: 1;
+  }
+  #detail .close:hover { background: var(--line); color: var(--ink); }
+  #detail h2 { font: 600 18px/1.2 "Fraunces", Georgia, serif; margin: 0 0 3px; padding-right: 24px; }
+  #detail .meta { color: var(--ink-3); font-size: 11.5px; margin-bottom: 14px; }
+
+  .hero { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .hero .num { font: 600 30px/1 "Fraunces", Georgia, serif; font-variant-numeric: tabular-nums; }
+  .hero .cap { color: var(--ink-3); font-size: 11.5px; }
+
+  .dim { margin: 11px 0; }
+  .dim .name { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 4px; }
+  .dim .name b { font-weight: 600; }
+  .dim .name .v { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 12px; }
+  .bar { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 4px; min-width: 2px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--danger); color: var(--danger);
+    border-radius: 7px; padding: 4px 9px; font-size: 11.5px; font-weight: 500;
+    margin: 6px 0 2px;
+  }
+
+  .facts { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .facts .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 12.5px; }
+  .facts .k { color: var(--ink-2); }
+  .facts .k small { color: var(--ink-3); }
+  .facts .v { font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
+  .facts .group { margin: 8px 0 2px; }
+
+  .footnote { color: var(--ink-3); font-size: 11px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 9px; }
+
+  /* maplibre popup restyle */
+  .maplibregl-popup-content {
+    font: 400 12.5px/1.45 "Inter", sans-serif; color: var(--ink);
+    background: var(--surface-solid); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 10px 13px;
+  }
+  .maplibregl-popup-close-button { font-size: 15px; color: var(--ink-3); right: 3px; top: 2px; }
+  .maplibregl-popup-tip { border-top-color: var(--surface-solid) !important; }
+  .popup-title { font-weight: 600; margin-bottom: 1px; }
+  .popup-sub { color: var(--ink-2); font-size: 11.5px; }
+  .tag {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    font-size: 10.5px; font-weight: 600; border-radius: 5px; padding: 1px 6px; margin-left: 4px;
+  }
+
   a { color: var(--accent); }
-  details summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+  @media (max-width: 760px) {
+    #controls { width: calc(100% - 32px); max-height: 46%; }
+    #detail { width: calc(100% - 32px); top: auto; bottom: 16px; max-height: 52%; }
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
 
 <div id="controls" class="panel">
-  <h1>柏林热浪不平等地图</h1>
-  <div class="sub">哪些街区在高温下需要优先关照 · 最近的降温点在哪</div>
-
-  <div class="metric-btns" id="metricBtns">
-    <button data-m="heat_vulnerability" class="active">综合指数</button>
-    <button data-m="dim_exposure">暴露 · 有多热</button>
-    <button data-m="dim_sensitivity">敏感 · 谁更脆弱</button>
-    <button data-m="dim_adaptive_capacity_lack">应对 · 能否躲避</button>
+  <div class="brand">
+    <h1>Berlin Heat Equity Map</h1>
+    <p>Which neighbourhoods need care first when heat arrives — and where the nearest cool spots are.</p>
   </div>
 
+  <p class="label">Map layer</p>
+  <div class="seg" id="metricBtns">
+    <button data-m="heat_vulnerability" class="active" style="--dot:#b30000">
+      <span class="swatch-dot"></span>
+      <span>Combined index<small>All three dimensions, weighted</small></span>
+    </button>
+    <button data-m="dim_exposure" style="--dot:var(--exposure)">
+      <span class="swatch-dot"></span>
+      <span>Exposure<small>How hot it gets here</small></span>
+    </button>
+    <button data-m="dim_sensitivity" style="--dot:var(--sensitivity)">
+      <span class="swatch-dot"></span>
+      <span>Sensitivity<small>Who is most at risk</small></span>
+    </button>
+    <button data-m="dim_adaptive_capacity_lack" style="--dot:var(--capacity)">
+      <span class="swatch-dot"></span>
+      <span>Coping capacity<small>How hard it is to find relief</small></span>
+    </button>
+  </div>
+
+  <p class="label">Cool spots &amp; overlays</p>
   <div class="toggles">
-    <label><input type="checkbox" id="tFountain" checked> 💧 饮水台（5–10 月运行）</label>
-    <label><input type="checkbox" id="tPark" checked> 🌳 公园绿地（≥1 公顷）</label>
-    <label><input type="checkbox" id="tStable"> ⬛ 标出多组权重下稳定的高优先街区</label>
+    <label><input type="checkbox" id="tFountain" checked><span class="switch"></span><span class="glyph">💧</span> Drinking fountains <small style="color:var(--ink-3)">&nbsp;May–Oct</small></label>
+    <label><input type="checkbox" id="tPark" checked><span class="switch"></span><span class="glyph">🌳</span> Parks ≥ 1 ha</label>
+    <label><input type="checkbox" id="tStable"><span class="switch"></span><span class="glyph">◼</span> Robust priority areas</label>
   </div>
 
   <div class="legend" id="legend"></div>
 
-  <details style="margin-top:10px">
-    <summary>这张图是什么，不是什么</summary>
-    <div class="note" style="border:none;padding-top:6px">
-      指数由暴露（PET/UTCI/夜间降温，2022）、敏感（年龄结构 2025、社会指标 2023）、
-      应对能力（行道树、绿地、饮水台距离，2025）合成，权重是可质疑的取舍而非客观真相。
-      街区平均值不代表街区里任何一个人的处境。它标示的是<b>需要优先送达帮助的地方</b>，
-      不是给社区贴标签。方法与局限见 README。
+  <details>
+    <summary>What this map is — and isn’t</summary>
+    <div class="body">
+      The index combines <b>exposure</b> (PET, UTCI, night-time cooling, 2022),
+      <b>sensitivity</b> (age structure 2025, social indicators 2023) and
+      <b>coping capacity</b> (street trees, green space, fountain distance, 2025).
+      Weights are documented choices, not objective truth. Area averages don’t
+      describe any individual. The map points to <b>where help should arrive
+      first</b> — it is not a label on any neighbourhood.
+      Method &amp; limits: see README.
     </div>
   </details>
 </div>
 
 <div id="detail" class="panel">
-  <button class="close" onclick="hideDetail()">×</button>
+  <button class="close" onclick="hideDetail()">✕</button>
   <div id="detailBody"></div>
 </div>
 
 <script>
 const METRICS = {
-  heat_vulnerability: '综合指数',
-  dim_exposure: '暴露维度',
-  dim_sensitivity: '敏感维度',
-  dim_adaptive_capacity_lack: '缺乏应对能力维度',
+  heat_vulnerability: 'Combined index',
+  dim_exposure: 'Exposure',
+  dim_sensitivity: 'Sensitivity',
+  dim_adaptive_capacity_lack: 'Lack of coping capacity',
 };
-// ColorBrewer YlOrRd 5 档（色盲友好序列色）
-const RAMP = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026'];
-const NODATA = '#d9d9d9';
+// ColorBrewer OrRd (sequential, single warm family, lightness-monotonic)
+const RAMP = ['#fef0d9', '#fdcc8a', '#fc8d59', '#e34a33', '#b30000'];
+const NODATA_LIGHT = '#d8d6d0', NODATA_DARK = '#3a3a38';
+const DARK = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const NODATA = DARK ? NODATA_DARK : NODATA_LIGHT;
+const FOUNTAIN_C = DARK ? '#4fa8e8' : '#1d6fb8';
+const PARK_C = DARK ? '#4fae57' : '#2e7d36';
 
 const map = new maplibregl.Map({
   container: 'map',
@@ -108,9 +282,9 @@ const map = new maplibregl.Map({
     sources: {
       basemap: {
         type: 'raster',
-        tiles: ['https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
+        tiles: [`https://basemaps.cartocdn.com/${DARK ? 'dark_all' : 'light_all'}/{z}/{x}/{y}@2x.png`],
         tileSize: 256,
-        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> · 数据: 柏林开放数据 (gdi.berlin.de, dl-de/by-2-0 & CC-BY)',
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> · Data: Berlin Open Data (gdi.berlin.de, dl-de/by-2-0 &amp; CC-BY)',
       },
     },
     layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
@@ -119,9 +293,11 @@ const map = new maplibregl.Map({
   zoom: 9.7,
   minZoom: 8.5,
 });
-map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+// keep the city centred in the space right of the control panel
+if (window.innerWidth > 760) map.jumpTo({ center: [13.404, 52.507], padding: { left: 348 } });
 
-let plrData, currentMetric = 'heat_vulnerability', breaks = {};
+let currentMetric = 'heat_vulnerability', breaks = {}, hoveredId = null;
 
 function quantileBreaks(values, k = 5) {
   const v = values.filter(x => x != null && isFinite(x)).sort((a, b) => a - b);
@@ -140,16 +316,13 @@ function fillExpression(metric) {
 function renderLegend() {
   const b = breaks[currentMetric];
   const fmt = x => x.toFixed(2);
-  const labels = [
-    `低（< ${fmt(b[0])}）`,
-    ...b.slice(0, -1).map((br, i) => `${fmt(br)} – ${fmt(b[i + 1])}`),
-    `高（≥ ${fmt(b[b.length - 1])}）`,
-  ];
-  document.getElementById('legend').innerHTML =
-    `<b>${METRICS[currentMetric]}</b>（0–1 百分位，五分位分级）` +
-    RAMP.map((c, i) => `<div class="row"><span class="swatch" style="background:${c}"></span>${labels[i]}</div>`).join('') +
-    `<div class="row"><span class="swatch" style="background:${NODATA}"></span>数据不足 / 常住人口 &lt; 100</div>` +
-    `<div class="row" style="margin-top:4px"><span class="dot" style="background:#1f78b4"></span>饮水台 <span class="dot" style="background:#33a02c;margin-left:8px"></span>公园</div>`;
+  document.getElementById('legend').innerHTML = `
+    <p class="label" style="margin-bottom:6px">${METRICS[currentMetric]} · percentile quintiles</p>
+    <div class="legend-bar">${RAMP.map(c => `<span style="background:${c}"></span>`).join('')}</div>
+    <div class="legend-ticks"><span>lower need</span><span>${fmt(b[0])}</span><span>${fmt(b[2])}</span><span>higher need</span></div>
+    <div class="legend-row"><span class="chip" style="background:${NODATA}"></span>Insufficient data · population &lt; 100</div>
+    <div class="legend-row"><span class="pt" style="background:${FOUNTAIN_C}"></span>Drinking fountain
+      <span class="pt" style="background:${PARK_C};margin-left:10px"></span>Park</div>`;
 }
 
 async function init() {
@@ -157,96 +330,123 @@ async function init() {
     fetch('data/plr.geojson').then(r => r.json()),
     fetch('data/refuges.geojson').then(r => r.json()),
   ]);
-  plrData = plr;
   for (const m of Object.keys(METRICS)) {
     breaks[m] = quantileBreaks(plr.features.map(f => f.properties[m]));
   }
 
-  map.addSource('plr', { type: 'geojson', data: plr });
+  map.addSource('plr', { type: 'geojson', data: plr, promoteId: 'plr_id' });
   map.addSource('refuges', { type: 'geojson', data: refuges });
 
   map.addLayer({
     id: 'plr-fill', type: 'fill', source: 'plr',
-    paint: { 'fill-color': fillExpression(currentMetric), 'fill-opacity': 0.72 },
+    paint: {
+      'fill-color': fillExpression(currentMetric),
+      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.92, 0.74],
+    },
   });
   map.addLayer({
     id: 'plr-line', type: 'line', source: 'plr',
-    paint: { 'line-color': '#fff', 'line-width': 0.6, 'line-opacity': 0.7 },
+    paint: { 'line-color': DARK ? '#000' : '#fff', 'line-width': 0.6, 'line-opacity': 0.6 },
+  });
+  map.addLayer({
+    id: 'plr-hover-line', type: 'line', source: 'plr',
+    filter: ['==', ['get', 'plr_id'], ''],
+    paint: { 'line-color': DARK ? '#f3f2ee' : '#191817', 'line-width': 1.6 },
   });
   map.addLayer({
     id: 'plr-stable', type: 'line', source: 'plr',
     filter: ['==', ['get', 'stable_high_risk'], true],
     layout: { visibility: 'none' },
-    paint: { 'line-color': '#1a1a1a', 'line-width': 2.2 },
+    paint: { 'line-color': DARK ? '#f3f2ee' : '#191817', 'line-width': 2, 'line-dasharray': [1.4, .9] },
   });
   map.addLayer({
     id: 'parks', type: 'circle', source: 'refuges',
     filter: ['==', ['get', 'type'], 'park'],
     paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.5, 14, 6],
-      'circle-color': '#33a02c', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.2, 14, 5.5],
+      'circle-color': PARK_C, 'circle-stroke-color': DARK ? '#1a1a19' : '#fff', 'circle-stroke-width': 1,
     },
   });
   map.addLayer({
     id: 'fountains', type: 'circle', source: 'refuges',
     filter: ['==', ['get', 'type'], 'fountain'],
     paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3, 14, 7],
-      'circle-color': '#1f78b4', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.2,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.8, 14, 6.5],
+      'circle-color': FOUNTAIN_C, 'circle-stroke-color': DARK ? '#1a1a19' : '#fff', 'circle-stroke-width': 1.2,
     },
   });
 
   map.on('click', 'plr-fill', e => showDetail(e.features[0].properties));
-  map.on('mouseenter', 'plr-fill', () => map.getCanvas().style.cursor = 'pointer');
-  map.on('mouseleave', 'plr-fill', () => map.getCanvas().style.cursor = '');
+  map.on('mousemove', 'plr-fill', e => {
+    const id = e.features[0].properties.plr_id;
+    if (hoveredId !== null) map.setFeatureState({ source: 'plr', id: hoveredId }, { hover: false });
+    hoveredId = id;
+    map.setFeatureState({ source: 'plr', id }, { hover: true });
+    map.setFilter('plr-hover-line', ['==', ['get', 'plr_id'], id]);
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', 'plr-fill', () => {
+    if (hoveredId !== null) map.setFeatureState({ source: 'plr', id: hoveredId }, { hover: false });
+    hoveredId = null;
+    map.setFilter('plr-hover-line', ['==', ['get', 'plr_id'], '']);
+    map.getCanvas().style.cursor = '';
+  });
   map.on('click', 'fountains', e => {
     const p = e.features[0].properties;
-    new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
-      `<b>💧 ${p.name}</b><br>${p.detail}${p.accessible === true || p.accessible === 'true' ? ' · ♿ 无障碍' : ''}` +
-      `<br><small>运行季节 ${p.season}${p.note ? ' · ' + p.note : ''}</small>`).addTo(map);
+    const acc = p.accessible === true || p.accessible === 'true';
+    new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(
+      `<div class="popup-title">💧 ${p.name}${acc ? '<span class="tag">♿ accessible</span>' : ''}</div>
+       <div class="popup-sub">${p.detail} · in service ${p.season}${p.note ? '<br>' + p.note : ''}</div>`).addTo(map);
   });
   map.on('click', 'parks', e => {
     const p = e.features[0].properties;
-    new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`<b>🌳 ${p.name}</b><br><small>${p.detail}</small>`).addTo(map);
+    new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(
+      `<div class="popup-title">🌳 ${p.name}</div><div class="popup-sub">${p.detail} public green space</div>`).addTo(map);
   });
 
   renderLegend();
 }
 
-function pct(x) { return x == null || !isFinite(x) ? '—' : Math.round(x * 100) + '%'; }
-function num(x, d = 1, unit = '') { return x == null || !isFinite(x) ? '数据不足' : (+x).toFixed(d) + unit; }
+const fmtPct = x => x == null || !isFinite(x) ? '—' : Math.round(x * 100) + '%';
+const fmtNum = (x, d = 1, unit = '') => x == null || !isFinite(x) ? 'no data' : (+x).toFixed(d) + unit;
 
 function showDetail(p) {
   const dims = [
-    ['暴露 · 这里有多热', p.dim_exposure, '#f03b20'],
-    ['敏感 · 居民有多脆弱', p.dim_sensitivity, '#6a51a3'],
-    ['应对 · 有多难躲避', p.dim_adaptive_capacity_lack, '#0b6e6e'],
+    ['Exposure', 'how hot it gets', p.dim_exposure, 'var(--exposure)'],
+    ['Sensitivity', 'who is most at risk', p.dim_sensitivity, 'var(--sensitivity)'],
+    ['Coping capacity', 'how hard to find relief', p.dim_adaptive_capacity_lack, 'var(--capacity)'],
   ];
   const hv = p.heat_vulnerability;
+  const hasIndex = hv != null && isFinite(hv);
   document.getElementById('detailBody').innerHTML = `
     <h2>${p.plr_name}</h2>
-    <div style="color:var(--muted);font-size:12px">Planungsraum ${p.plr_id} · 常住 ${p.pop_total ? Math.round(p.pop_total).toLocaleString() : '?'} 人</div>
-    ${(hv == null || !isFinite(hv))
-      ? '<p>该街区常住人口过少或数据不全，不参与排名。</p>'
-      : `<div class="dim"><div class="name"><b>综合指数</b><b>${(+hv).toFixed(2)}</b></div>
-           <div class="bar"><div style="width:${hv * 100}%;background:#7a2e0e"></div></div></div>` +
-        dims.map(([n, v, c]) => `
-          <div class="dim"><div class="name"><span>${n}</span><span>${v == null ? '—' : (+v).toFixed(2)}</span></div>
-          <div class="bar"><div style="width:${(v || 0) * 100}%;background:${c}"></div></div></div>`).join('')}
+    <div class="meta">Planungsraum ${p.plr_id} · ${p.pop_total ? Math.round(p.pop_total).toLocaleString('en') : '?'} residents</div>
+    ${!hasIndex
+      ? '<p style="color:var(--ink-2)">Too few residents or incomplete data — this area is not ranked.</p>'
+      : `<div class="hero"><span class="num">${(+hv).toFixed(2)}</span><span class="cap">combined index · 0–1 percentile scale</span></div>
+         <div class="dim"><div class="bar"><div style="width:${hv * 100}%;background:linear-gradient(90deg,${RAMP[1]},${RAMP[4]})"></div></div></div>` +
+        dims.map(([n, sub, v, c]) => `
+          <div class="dim">
+            <div class="name"><b>${n} <small style="font-weight:400;color:var(--ink-3)">· ${sub}</small></b><span class="v">${v == null ? '—' : (+v).toFixed(2)}</span></div>
+            <div class="bar"><div style="width:${(v || 0) * 100}%;background:${c}"></div></div>
+          </div>`).join('')}
     ${p.stable_high_risk === true || p.stable_high_risk === 'true'
-      ? '<span class="badge">多组权重下均属最需优先关照的街区</span>' : ''}
+      ? '<div class="badge">◼ Priority under every weighting we tested</div>' : ''}
     <div class="facts">
-      <div><span>白天体感 PET（2022）</span><span class="v">${num(p.pet_day, 1, ' °C')}</span></div>
-      <div><span>夜间降温幅度（2022）</span><span class="v">${num(p.night_cooling, 2, ' K/h')}</span></div>
-      <div><span>65 岁以上占比（2025）</span><span class="v">${pct(p.share_65plus)}</span></div>
-      <div><span>6 岁以下占比（2025）</span><span class="v">${pct(p.share_0to6)}</span></div>
-      <div><span>领取转移支付比例（2023）</span><span class="v">${num(p.transfer_income, 1, ' %')}</span></div>
-      <div><span>儿童贫困率（2023）</span><span class="v">${num(p.child_poverty, 1, ' %')}</span></div>
-      <div><span>行道树密度</span><span class="v">${num(p.street_tree_density, 0, ' 棵/km²')}</span></div>
-      <div><span>公共绿地覆盖</span><span class="v">${pct(p.green_share)}</span></div>
-      <div><span>街区中心到最近饮水台</span><span class="v">${num(p.dist_to_fountain, 0, ' m')}</span></div>
+      <p class="label group">Heat · 2022 model</p>
+      <div class="row"><span class="k">Perceived temperature (PET, 2 pm)</span><span class="v">${fmtNum(p.pet_day, 1, ' °C')}</span></div>
+      <div class="row"><span class="k">Night-time cooling rate</span><span class="v">${fmtNum(p.night_cooling, 2, ' K/h')}</span></div>
+      <p class="label group">People · 2023–2025</p>
+      <div class="row"><span class="k">Residents 65+</span><span class="v">${fmtPct(p.share_65plus)}</span></div>
+      <div class="row"><span class="k">Children under 6</span><span class="v">${fmtPct(p.share_0to6)}</span></div>
+      <div class="row"><span class="k">Receiving welfare support</span><span class="v">${fmtNum(p.transfer_income, 1, '%')}</span></div>
+      <div class="row"><span class="k">Child poverty</span><span class="v">${fmtNum(p.child_poverty, 1, '%')}</span></div>
+      <p class="label group">Relief · 2025</p>
+      <div class="row"><span class="k">Street trees</span><span class="v">${fmtNum(p.street_tree_density, 0, ' /km²')}</span></div>
+      <div class="row"><span class="k">Public green space</span><span class="v">${fmtPct(p.green_share)}</span></div>
+      <div class="row"><span class="k">Nearest drinking fountain</span><span class="v">${fmtNum(p.dist_to_fountain, 0, ' m')}</span></div>
     </div>
-    <div class="note">数值为街区平均/汇总，不代表街区内每个人的处境；各数据年份不同，已逐项标注。</div>`;
+    <div class="footnote">Figures are area averages — they don’t describe any individual household. Source years differ and are labelled per group.</div>`;
   document.getElementById('detail').style.display = 'block';
 }
 function hideDetail() { document.getElementById('detail').style.display = 'none'; }
@@ -254,7 +454,7 @@ function hideDetail() { document.getElementById('detail').style.display = 'none'
 document.getElementById('metricBtns').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   currentMetric = btn.dataset.m;
-  document.querySelectorAll('.metric-btns button').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('active', b === btn));
   map.setPaintProperty('plr-fill', 'fill-color', fillExpression(currentMetric));
   renderLegend();
 });

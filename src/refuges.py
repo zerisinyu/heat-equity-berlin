@@ -28,7 +28,7 @@ def load_fountains(cfg: dict, working: str) -> gpd.GeoDataFrame:
         # Bituma 型为无障碍饮水台，单独打标
         "accessible": kind.str.contains("bituma", case=False, na=False),
         "note": g[fm["restrictions"]].fillna("").astype(str),
-        "season": "5–10 月",
+        "season": "May–Oct",
     }, geometry=g.geometry)
     return out
 
@@ -50,7 +50,7 @@ def load_parks(cfg: dict, working: str) -> gpd.GeoDataFrame:
         # 序列化成字符串 'True'/'False'，前端布尔判断悄悄失效
         "accessible": False,
         "note": "",
-        "season": "全年",
+        "season": "Year-round",
     }, geometry=g.geometry.representative_point())
     return out
 
