@@ -25,6 +25,10 @@
     --exposure: #e06a55;
     --sensitivity: #8f4e86;
     --capacity: #0e7a6e;
+    --c-fountain: #1d6fb8;
+    --c-park: #2e7d36;
+    --c-library: #b3701f;
+    --c-coolroom: #0e7a6e;
     /* sunset-berry ramp — must match src/surfaces.py RAMP */
     --ramp: linear-gradient(90deg, #FEF6EC, #FBCB97, #F58B76, #C94F7C, #7D2E68);
   }
@@ -59,7 +63,49 @@
     font: 600 21px/1.15 "Fraunces", Georgia, serif;
     letter-spacing: -.01em; margin: 0 0 4px;
   }
-  .brand p { margin: 0 0 16px; color: var(--ink-2); font-size: 12.5px; }
+  .brand p { margin: 0 0 14px; color: var(--ink-2); font-size: 12.5px; }
+
+  /* search */
+  .search-wrap { position: relative; margin-bottom: 16px; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--surface-solid); padding: 8px 11px;
+    transition: border-color .15s;
+  }
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box svg { flex: none; opacity: .45; }
+  .search-box input {
+    border: 0; outline: 0; background: none; width: 100%;
+    font: 400 13px/1.3 "Inter", sans-serif; color: var(--ink);
+  }
+  .search-box input::placeholder { color: var(--ink-3); }
+  .search-results {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 9;
+    background: var(--surface-solid); border: 1px solid var(--line);
+    border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; display: none;
+  }
+  .search-results button {
+    display: flex; align-items: baseline; gap: 8px; width: 100%;
+    padding: 8px 12px; border: 0; background: none; cursor: pointer;
+    font: 400 12.5px/1.35 "Inter", sans-serif; color: var(--ink); text-align: left;
+  }
+  .search-results button:hover { background: var(--accent-soft); }
+  .search-results .kind { flex: none; font-size: 10px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--ink-3); width: 52px; }
+  .focus-card {
+    margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+    background: var(--accent-soft); font-size: 12.5px; position: relative;
+  }
+  .focus-card b { font-weight: 600; }
+  .focus-card .counts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; color: var(--ink-2); }
+  .focus-card .counts span::before { content: "●"; font-size: 8px; vertical-align: 1.5px; margin-right: 5px; }
+  .focus-card .cf::before { color: var(--c-fountain); } .focus-card .cp::before { color: var(--c-park); }
+  .focus-card .cl::before { color: var(--c-library); } .focus-card .cc::before { color: var(--c-coolroom); }
+  .focus-card .clear {
+    position: absolute; top: 6px; right: 8px; border: 0; background: none;
+    color: var(--ink-3); cursor: pointer; font-size: 13px;
+  }
 
   .label {
     font: 600 10.5px/1 "Inter", sans-serif; letter-spacing: .09em;
@@ -76,16 +122,13 @@
   }
   .seg button:hover { background: var(--line); }
   .seg button.active { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
-  .seg .swatch-dot {
-    width: 9px; height: 9px; border-radius: 3px; flex: none;
-    background: var(--dot, var(--ink-3));
-  }
+  .seg .swatch-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; background: var(--dot, var(--ink-3)); }
   .seg small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11px; }
 
   .toggles { display: flex; flex-direction: column; gap: 2px; margin-bottom: 16px; }
   .toggles label {
     display: flex; align-items: center; gap: 10px;
-    padding: 6px 10px; border-radius: 9px; cursor: pointer; font-size: 13px;
+    padding: 5px 10px; border-radius: 9px; cursor: pointer; font-size: 13px;
   }
   .toggles label:hover { background: var(--line); }
   .toggles input { display: none; }
@@ -100,9 +143,11 @@
     background: var(--surface-solid); box-shadow: 0 1px 2px rgba(0,0,0,.25);
     transition: transform .15s;
   }
-  input:checked + .switch { background: var(--accent); }
+  input:checked + .switch { background: var(--sw, var(--accent)); }
   input:checked + .switch::after { transform: translateX(12px); }
-  .toggles .glyph { width: 15px; text-align: center; flex: none; }
+  .toggles .dot { width: 10px; height: 10px; border-radius: 50%; flex: none;
+    box-shadow: 0 0 0 2px var(--surface-solid), 0 1px 3px rgba(0,0,0,.3); }
+  .toggles small { color: var(--ink-3); }
 
   /* legend */
   .legend { border-top: 1px solid var(--line); padding-top: 14px; }
@@ -110,7 +155,6 @@
   .legend-ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); margin-bottom: 10px; }
   .legend-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-2); padding: 2px 0; }
   .legend-row .chip { width: 18px; height: 10px; border-radius: 3px; flex: none; border: 1px dashed var(--ink-3); }
-  .legend-row .pt { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px var(--surface-solid), 0 0 3px rgba(0,0,0,.4); }
 
   details { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
   summary {
@@ -168,11 +212,11 @@
   .maplibregl-popup-content {
     font: 400 12.5px/1.45 "Inter", sans-serif; color: var(--ink);
     background: var(--surface-solid); border-radius: 10px;
-    box-shadow: var(--shadow); padding: 10px 13px;
+    box-shadow: var(--shadow); padding: 10px 13px; max-width: 240px;
   }
   .maplibregl-popup-close-button { font-size: 15px; color: var(--ink-3); right: 3px; top: 2px; }
   .maplibregl-popup-tip { border-top-color: var(--surface-solid) !important; }
-  .popup-title { font-weight: 600; margin-bottom: 1px; }
+  .popup-title { font-weight: 600; margin-bottom: 1px; padding-right: 10px; }
   .popup-sub { color: var(--ink-2); font-size: 11.5px; }
   .tag {
     display: inline-block; background: var(--accent-soft); color: var(--accent);
@@ -195,6 +239,15 @@
     <p>Which neighbourhoods need care first when heat arrives — and where the nearest cool spots are.</p>
   </div>
 
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="searchInput" type="text" placeholder="Search a neighbourhood or address…" autocomplete="off">
+    </div>
+    <div class="search-results" id="searchResults"></div>
+    <div class="focus-card" id="focusCard" style="display:none"></div>
+  </div>
+
   <p class="label">Map layer</p>
   <div class="seg" id="metricBtns">
     <button data-m="heat_vulnerability" class="active" style="--dot:#C94F7C">
@@ -215,11 +268,15 @@
     </button>
   </div>
 
-  <p class="label">Cool spots &amp; overlays</p>
+  <p class="label">Cool spots</p>
+  <div class="toggles" id="refugeToggles">
+    <label style="--sw:var(--c-fountain)"><input type="checkbox" data-t="fountain" checked><span class="switch"></span><span class="dot" style="background:var(--c-fountain)"></span> Drinking fountains <small>&nbsp;May–Oct</small></label>
+    <label style="--sw:var(--c-park)"><input type="checkbox" data-t="park" checked><span class="switch"></span><span class="dot" style="background:var(--c-park)"></span> Parks ≥ 1 ha</label>
+    <label style="--sw:var(--c-library)"><input type="checkbox" data-t="library" checked><span class="switch"></span><span class="dot" style="background:var(--c-library)"></span> Libraries <small>&nbsp;indoor</small></label>
+    <label style="--sw:var(--c-coolroom)"><input type="checkbox" data-t="cool_room" checked><span class="switch"></span><span class="dot" style="background:var(--c-coolroom)"></span> Official cool rooms <small>&nbsp;heat days</small></label>
+  </div>
   <div class="toggles">
-    <label><input type="checkbox" id="tFountain" checked><span class="switch"></span><span class="glyph">💧</span> Drinking fountains <small style="color:var(--ink-3)">&nbsp;May–Oct</small></label>
-    <label><input type="checkbox" id="tPark" checked><span class="switch"></span><span class="glyph">🌳</span> Parks ≥ 1 ha</label>
-    <label><input type="checkbox" id="tStable"><span class="switch"></span><span class="glyph">◼</span> Robust priority areas</label>
+    <label><input type="checkbox" id="tStable"><span class="switch"></span><span style="width:10px;text-align:center">◼</span> Robust priority areas</label>
   </div>
 
   <div class="legend" id="legend"></div>
@@ -234,7 +291,9 @@
       social indicators 2023) and <b>coping capacity</b> (street trees, green space,
       fountain distance, 2025). Weights are documented choices, not objective truth.
       Area averages don’t describe any individual. The map points to <b>where help
-      should arrive first</b> — it is not a label on any neighbourhood.
+      should arrive first</b> — it is not a label on any neighbourhood.<br><br>
+      Cool rooms: official <i>Kühle Räume</i> registry (churches, community centres;
+      open on heat days). Libraries © OpenStreetMap contributors (ODbL).
       Method &amp; limits: see README.
     </div>
   </details>
@@ -254,8 +313,12 @@ const METRICS = {
 };
 // must match src/surfaces.py RAMP
 const RAMP = ['#FEF6EC', '#FBCB97', '#F58B76', '#C94F7C', '#7D2E68'];
-const FOUNTAIN_C = '#1d6fb8';
-const PARK_C = '#2e7d36';
+const REFUGE = {
+  fountain:  { color: '#1d6fb8', emoji: '💧', label: 'Drinking fountain' },
+  park:      { color: '#2e7d36', emoji: '🌳', label: 'Park' },
+  library:   { color: '#b3701f', emoji: '📚', label: 'Library' },
+  cool_room: { color: '#0e7a6e', emoji: '❄️', label: 'Official cool room' },
+};
 
 const map = new maplibregl.Map({
   container: 'map',
@@ -266,7 +329,7 @@ const map = new maplibregl.Map({
         type: 'raster',
         tiles: ['https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
         tileSize: 256,
-        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> · Data: Berlin Open Data (gdi.berlin.de, dl-de/by-2-0 &amp; CC-BY)',
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> · Data: Berlin Open Data (gdi.berlin.de, dl-de/by-2-0 &amp; CC-BY) · Libraries &copy; OSM contributors (ODbL)',
       },
     },
     layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
@@ -276,19 +339,24 @@ const map = new maplibregl.Map({
   minZoom: 8.5,
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
-// keep the city centred in the space right of the control panel
-if (window.innerWidth > 760) map.jumpTo({ center: [13.404, 52.507], padding: { left: 348 } });
+const PAD = () => ({ left: window.innerWidth > 760 ? 348 : 0 });
+if (window.innerWidth > 760) map.jumpTo({ center: [13.404, 52.507], padding: PAD() });
 
 let currentMetric = 'heat_vulnerability', hoveredId = null;
+let plrData = null, refugeData = null;
+const enabledTypes = new Set(Object.keys(REFUGE));
+
+const typeColorExpr = ['match', ['get', 'type'],
+  ...Object.entries(REFUGE).flatMap(([t, s]) => [t, s.color]), '#888'];
+
+function refugeFilter() { return ['in', ['get', 'type'], ['literal', [...enabledTypes]]]; }
 
 function renderLegend() {
   document.getElementById('legend').innerHTML = `
     <p class="label" style="margin-bottom:6px">${METRICS[currentMetric]} · smoothed surface</p>
     <div class="legend-bar"></div>
     <div class="legend-ticks"><span>lower need</span><span>higher need</span></div>
-    <div class="legend-row"><span class="chip"></span>Uncoloured: not ranked (population &lt; 100 or incomplete data)</div>
-    <div class="legend-row"><span class="pt" style="background:${FOUNTAIN_C}"></span>Drinking fountain
-      <span class="pt" style="background:${PARK_C};margin-left:10px"></span>Park</div>`;
+    <div class="legend-row"><span class="chip"></span>Uncoloured: not ranked (population &lt; 100 or incomplete data)</div>`;
 }
 
 async function init() {
@@ -297,8 +365,8 @@ async function init() {
     fetch('data/refuges.geojson').then(r => r.json()),
     fetch('data/surfaces.json').then(r => r.json()),
   ]);
+  plrData = plr; refugeData = refuges;
 
-  // one smooth raster surface per metric; switch by visibility
   for (const m of Object.keys(METRICS)) {
     map.addSource(`surf-${m}`, { type: 'image', url: `data/surface_${m}.png`, coordinates: surf.corners });
     map.addLayer({
@@ -310,12 +378,10 @@ async function init() {
 
   map.addSource('plr', { type: 'geojson', data: plr, promoteId: 'plr_id' });
   map.addSource('refuges', { type: 'geojson', data: refuges });
+  map.addSource('focus', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
 
   // invisible hit layer — districts stay clickable without hard edges
-  map.addLayer({
-    id: 'plr-fill', type: 'fill', source: 'plr',
-    paint: { 'fill-color': '#000', 'fill-opacity': 0.01 },
-  });
+  map.addLayer({ id: 'plr-fill', type: 'fill', source: 'plr', paint: { 'fill-color': '#000', 'fill-opacity': 0.01 } });
   map.addLayer({
     id: 'plr-hover-line', type: 'line', source: 'plr',
     filter: ['==', ['get', 'plr_id'], ''],
@@ -327,25 +393,39 @@ async function init() {
     layout: { visibility: 'none' },
     paint: { 'line-color': '#221f1e', 'line-width': 1.8, 'line-dasharray': [1.4, .9], 'line-opacity': .75 },
   });
+
+  // 1 km focus ring
   map.addLayer({
-    id: 'parks', type: 'circle', source: 'refuges',
-    filter: ['==', ['get', 'type'], 'park'],
+    id: 'focus-fill', type: 'fill', source: 'focus',
+    paint: { 'fill-color': '#221f1e', 'fill-opacity': 0.045 },
+  });
+  map.addLayer({
+    id: 'focus-line', type: 'line', source: 'focus',
+    paint: { 'line-color': '#221f1e', 'line-width': 1.6, 'line-dasharray': [2.2, 1.6], 'line-opacity': .65 },
+  });
+
+  // refuges: soft halo underneath + crisp dot on top, coloured by type
+  map.addLayer({
+    id: 'refuge-halo', type: 'circle', source: 'refuges', filter: refugeFilter(),
     paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.2, 14, 5.5],
-      'circle-color': PARK_C, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1,
-      'circle-opacity': .85,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 5, 12, 9, 14, 13],
+      'circle-color': typeColorExpr, 'circle-opacity': 0.18, 'circle-blur': 0.9,
     },
   });
   map.addLayer({
-    id: 'fountains', type: 'circle', source: 'refuges',
-    filter: ['==', ['get', 'type'], 'fountain'],
+    id: 'refuge-pt', type: 'circle', source: 'refuges', filter: refugeFilter(),
     paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.8, 14, 6.5],
-      'circle-color': FOUNTAIN_C, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.2,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.6, 12, 4.2, 14, 6],
+      'circle-color': typeColorExpr,
+      'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 1.2,
     },
   });
 
-  map.on('click', 'plr-fill', e => showDetail(e.features[0].properties));
+  map.on('click', 'plr-fill', e => {
+    // let refuge clicks win — skip district card if a dot was hit
+    const hits = map.queryRenderedFeatures(e.point, { layers: ['refuge-pt'] });
+    if (!hits.length) showDetail(e.features[0].properties);
+  });
   map.on('mousemove', 'plr-fill', e => {
     const id = e.features[0].properties.plr_id;
     if (id !== hoveredId) {
@@ -359,22 +439,149 @@ async function init() {
     map.setFilter('plr-hover-line', ['==', ['get', 'plr_id'], '']);
     map.getCanvas().style.cursor = '';
   });
-  map.on('click', 'fountains', e => {
+  map.on('click', 'refuge-pt', e => {
     const p = e.features[0].properties;
+    const s = REFUGE[p.type] || {};
     const acc = p.accessible === true || p.accessible === 'true';
-    new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(
-      `<div class="popup-title">💧 ${p.name}${acc ? '<span class="tag">♿ accessible</span>' : ''}</div>
-       <div class="popup-sub">${p.detail} · in service ${p.season}${p.note ? '<br>' + p.note : ''}</div>`).addTo(map);
-  });
-  map.on('click', 'parks', e => {
-    const p = e.features[0].properties;
-    new maplibregl.Popup({ offset: 8 }).setLngLat(e.lngLat).setHTML(
-      `<div class="popup-title">🌳 ${p.name}</div><div class="popup-sub">${p.detail} public green space</div>`).addTo(map);
+    new maplibregl.Popup({ offset: 10 }).setLngLat(e.lngLat).setHTML(
+      `<div class="popup-title">${s.emoji} ${p.name}${acc ? '<span class="tag">♿ accessible</span>' : ''}</div>
+       <div class="popup-sub">${s.label}${p.detail ? ' · ' + p.detail : ''}${p.season ? ' · ' + p.season : ''}${p.note ? '<br>' + p.note : ''}</div>`).addTo(map);
   });
 
   renderLegend();
 }
 
+/* ---------- search ---------- */
+const BBOX = '13.05,52.33,13.78,52.68';
+const input = document.getElementById('searchInput');
+const resultsEl = document.getElementById('searchResults');
+let debounceT = null;
+
+function plrCentroid(f) {
+  // average of the largest outer ring — good enough for flyTo targets
+  const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+  const ring = polys.map(p => p[0]).sort((a, b) => b.length - a.length)[0];
+  let x = 0, y = 0;
+  for (const [lng, lat] of ring) { x += lng; y += lat; }
+  return [x / ring.length, y / ring.length];
+}
+
+async function runSearch(q) {
+  const out = [];
+  if (plrData) {
+    const ql = q.toLowerCase();
+    for (const f of plrData.features) {
+      if (f.properties.plr_name.toLowerCase().includes(ql)) {
+        out.push({ kind: 'District', label: f.properties.plr_name, pos: plrCentroid(f) });
+        if (out.length >= 4) break;
+      }
+    }
+  }
+  try {
+    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=4&lang=en&bbox=${BBOX}`);
+    const j = await r.json();
+    for (const f of j.features || []) {
+      const p = f.properties;
+      const label = [p.name, p.street, p.city === 'Berlin' ? null : p.city].filter(Boolean).join(', ');
+      if (!label) continue;
+      out.push({ kind: p.osm_value === 'residential' ? 'Area' : 'Place', label, pos: f.geometry.coordinates });
+      if (out.length >= 8) break;
+    }
+  } catch (e) { /* offline geocoder → local results only */ }
+  return out;
+}
+
+input.addEventListener('input', () => {
+  clearTimeout(debounceT);
+  const q = input.value.trim();
+  if (q.length < 2) { resultsEl.style.display = 'none'; return; }
+  debounceT = setTimeout(async () => {
+    const res = await runSearch(q);
+    resultsEl.innerHTML = res.length
+      ? res.map((r, i) => `<button data-i="${i}"><span class="kind">${r.kind}</span>${r.label}</button>`).join('')
+      : '<button disabled><span class="kind">—</span>No matches in Berlin</button>';
+    resultsEl.style.display = 'block';
+    resultsEl._items = res;
+  }, 250);
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) resultsEl.style.display = 'none';
+});
+resultsEl.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-i]'); if (!btn) return;
+  const item = resultsEl._items[+btn.dataset.i];
+  resultsEl.style.display = 'none';
+  input.value = item.label;
+  focusAt(item.pos, item.label);
+});
+
+const R_EARTH = 6371000, FOCUS_R = 1000;
+function circlePolygon([lng, lat], r) {
+  const coords = [];
+  for (let i = 0; i <= 64; i++) {
+    const a = 2 * Math.PI * i / 64;
+    coords.push([
+      lng + (r * Math.cos(a)) / (111320 * Math.cos(lat * Math.PI / 180)),
+      lat + (r * Math.sin(a)) / 110540,
+    ]);
+  }
+  return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] } };
+}
+function haversine([lng1, lat1], [lng2, lat2]) {
+  const toR = x => x * Math.PI / 180;
+  const dLat = toR(lat2 - lat1), dLng = toR(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toR(lat1)) * Math.cos(toR(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R_EARTH * Math.asin(Math.sqrt(a));
+}
+function pointInPoly([lng, lat], f) {
+  const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+  for (const poly of polys) {
+    let inside = false;
+    for (const ring of [poly[0]]) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i], [xj, yj] = ring[j];
+        if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+      }
+    }
+    if (inside) return true;
+  }
+  return false;
+}
+
+function focusAt(pos, label) {
+  map.getSource('focus').setData({ type: 'FeatureCollection', features: [circlePolygon(pos, FOCUS_R)] });
+  map.flyTo({ center: pos, zoom: 13.4, padding: PAD(), duration: 1400 });
+
+  const counts = { fountain: 0, park: 0, library: 0, cool_room: 0 };
+  let nearest = null;
+  for (const f of refugeData.features) {
+    const d = haversine(pos, f.geometry.coordinates);
+    if (d <= FOCUS_R) counts[f.properties.type]++;
+    if (enabledTypes.has(f.properties.type) && (!nearest || d < nearest.d)) nearest = { d, f };
+  }
+  const card = document.getElementById('focusCard');
+  card.style.display = 'block';
+  card.innerHTML = `
+    <button class="clear" title="Clear" onclick="clearFocus()">✕</button>
+    <b>${label}</b> · within 1 km:
+    <div class="counts">
+      <span class="cf">${counts.fountain} fountains</span>
+      <span class="cp">${counts.park} parks</span>
+      <span class="cl">${counts.library} libraries</span>
+      <span class="cc">${counts.cool_room} cool rooms</span>
+    </div>
+    ${nearest ? `<div style="margin-top:5px;color:var(--ink-2)">Nearest cool spot: ${REFUGE[nearest.f.properties.type].emoji} ${nearest.f.properties.name} · ${Math.round(nearest.d)} m</div>` : ''}`;
+
+  const plrHit = plrData.features.find(f => pointInPoly(pos, f));
+  if (plrHit) showDetail(plrHit.properties);
+}
+function clearFocus() {
+  map.getSource('focus').setData({ type: 'FeatureCollection', features: [] });
+  document.getElementById('focusCard').style.display = 'none';
+  input.value = '';
+}
+
+/* ---------- detail panel ---------- */
 const fmtPct = x => x == null || !isFinite(x) ? '—' : Math.round(x * 100) + '%';
 const fmtNum = (x, d = 1, unit = '') => x == null || !isFinite(x) ? 'no data' : (+x).toFixed(d) + unit;
 
@@ -419,6 +626,7 @@ function showDetail(p) {
 }
 function hideDetail() { document.getElementById('detail').style.display = 'none'; }
 
+/* ---------- controls wiring ---------- */
 document.getElementById('metricBtns').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   const prev = currentMetric;
@@ -428,10 +636,12 @@ document.getElementById('metricBtns').addEventListener('click', e => {
   if (map.getLayer(`surf-${currentMetric}`)) map.setLayoutProperty(`surf-${currentMetric}`, 'visibility', 'visible');
   renderLegend();
 });
-document.getElementById('tFountain').addEventListener('change', e =>
-  map.setLayoutProperty('fountains', 'visibility', e.target.checked ? 'visible' : 'none'));
-document.getElementById('tPark').addEventListener('change', e =>
-  map.setLayoutProperty('parks', 'visibility', e.target.checked ? 'visible' : 'none'));
+document.getElementById('refugeToggles').addEventListener('change', e => {
+  const t = e.target.dataset.t; if (!t) return;
+  e.target.checked ? enabledTypes.add(t) : enabledTypes.delete(t);
+  map.setFilter('refuge-halo', refugeFilter());
+  map.setFilter('refuge-pt', refugeFilter());
+});
 document.getElementById('tStable').addEventListener('change', e =>
   map.setLayoutProperty('plr-stable', 'visibility', e.target.checked ? 'visible' : 'none'));
 

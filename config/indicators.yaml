@@ -136,8 +136,35 @@ sources:
       location: standort
       restrictions: einschraenkungen
 
-  # 公共图书馆无官方 WFS（2026-07 检索），MVP 降温点先用饮水台+绿地，
-  # 图书馆可选阶段用 OSM Overpass 补充（注意 ODbL 授权注明）。
+  kuehle_raeume:
+    description: "Kühle Räume（官方避暑室内场所：教堂、社区中心等，Hitzeschutz）"
+    type: wfs
+    service: kuehle_raeume
+    layer: "kuehle_raeume:kuehle_raeume"
+    expected_count: 111
+    license: "dl-de-by-2.0"
+    year: 2025
+    verified: true
+    field_map:
+      name: kuehle_raeume
+      address: adresse
+      hours: oeffnungszeiten
+      wheelchair: rollstuhlgerechter_zugang
+      note: hinweis
+
+  bibliotheken_osm:
+    description: "公共图书馆（OSM amenity=library，官方无此数据集）"
+    type: overpass
+    license: "ODbL（© OpenStreetMap contributors）"
+    year: 2026
+    verified: true
+    query: >
+      [out:json][timeout:120];
+      area["ISO3166-2"="DE-BE"][admin_level=4]->.a;
+      (node["amenity"="library"](area.a);
+       way["amenity"="library"](area.a);
+       relation["amenity"="library"](area.a););
+      out center tags;
 
 # =====================================================================
 # 指标 → 维度归属与权重

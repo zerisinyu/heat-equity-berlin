@@ -83,6 +83,33 @@ def fetch_wfs_layer(base: str, service: str, layer: str,
     return {"type": "FeatureCollection", "crs": crs, "features": features}
 
 
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+
+
+def fetch_overpass(query: str) -> dict:
+    """Overpass 查询 → GeoJSON 点集（way/relation 取 center）。
+    不写 crs 字段：GeoJSON 规范默认 WGS84，读取端按 4326 处理。"""
+    # Overpass 拒绝默认 python-requests UA（406），须自报家门
+    r = requests.post(OVERPASS_URL, data={"data": query}, timeout=TIMEOUT,
+                      headers={"User-Agent": "heat-equity-berlin/1.0 (research)"})
+    r.raise_for_status()
+    elements = r.json()["elements"]
+    features = []
+    for el in elements:
+        if "lat" in el:
+            lon, lat = el["lon"], el["lat"]
+        elif "center" in el:
+            lon, lat = el["center"]["lon"], el["center"]["lat"]
+        else:
+            continue
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {"osm_id": f"{el['type']}/{el['id']}", **el.get("tags", {})},
+        })
+    return {"type": "FeatureCollection", "features": features}
+
+
 def fetch_csv(url: str, out_path) -> None:
     r = requests.get(url, timeout=TIMEOUT)
     r.raise_for_status()
@@ -116,6 +143,24 @@ def run(cfg: dict) -> None:
             with open(out, "w", encoding="utf-8") as f:
                 json.dump(fc, f, ensure_ascii=False)
             print(f"  {key}: 已缓存 {len(fc['features'])} 要素 → {out.name}")
+
+        elif src["type"] == "overpass":
+            out = DATA_RAW / f"{key}.geojson"
+            if out.exists():
+                with open(out, encoding="utf-8") as f:
+                    n = len(json.load(f)["features"])
+                print(f"  {key}: 缓存命中（{n} 要素）")
+                continue
+            print(f"  {key}: Overpass 查询 …")
+            try:
+                fc = fetch_overpass(src["query"])
+                if not fc["features"]:
+                    raise RuntimeError("Overpass 返回 0 要素")
+                with open(out, "w", encoding="utf-8") as f:
+                    json.dump(fc, f, ensure_ascii=False)
+                print(f"  {key}: 已缓存 {len(fc['features'])} 要素 → {out.name}")
+            except Exception as e:
+                print(f"  {key}: 抓取失败 — {e}（不中断管线）")
 
         elif src["type"] == "csv":
             out = DATA_RAW / f"{key}.csv"

@@ -55,8 +55,7 @@ indicators / index / refuges / export。
 - **数据年份不齐**：气候 2022、社会监测 2023、人口 2025、绿化 2025。
   它们不是同一时点的快照。
 - **已知缺口**：80+ 高龄占比因统计局网站改版暂缺（用 65+ 代替，权重
-  已调整）；空调普及率无直接数据，未纳入；室内避暑点（图书馆等）
-  暂未纳入降温点图层。详见 [NOTES.md](NOTES.md) 待办。
+  已调整）；空调普及率无直接数据，未纳入。详见 [NOTES.md](NOTES.md) 待办。
 - 指数构造中的每一步（归一化方式、权重、最低人口门槛）都可质疑、
   可复算——这正是把它全部开源的原因。
 
@@ -71,6 +70,8 @@ indicators / index / refuges / export。
 - Monitoring Soziale Stadtentwicklung 2023 — dl-de/by-2-0
 - Baumbestand（Straßenbäume）、Grünanlagen — dl-de/by-2-0
 - Trinkwasserbrunnen（Berliner Wasserbetriebe）— dl-de/zero-2-0
+- Kühle Räume / Hitzeschutz（官方避暑室内场所，111 个）— dl-de/by-2-0
+- 公共图书馆点位 — © OpenStreetMap contributors，ODbL（官方无此数据集）
 - 人口：Amt für Statistik Berlin-Brandenburg，SB A I 16 hj（31.12.2025）— CC-BY
 
 基础底图 © OpenStreetMap 贡献者 © CARTO。

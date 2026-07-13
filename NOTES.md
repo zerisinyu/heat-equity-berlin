@@ -8,8 +8,11 @@
       31.12.2025 时点），敏感维度权重已重分配（65+ 0.30）。
       `indicators.py:population_from_csv` 已就位——若 CSV 恢复，放进
       `data/raw/population_age.csv` 即自动优先使用并恢复 80+。
-- [ ] 图书馆：无官方 WFS（2026-07 检索确认）。MVP 降温点 = 饮水台 + 绿地；
-      可选阶段用 OSM Overpass 补图书馆（amenity=library，注意 ODbL 授权注明）。
+- [x] 图书馆：官方无 WFS，已用 OSM Overpass 补齐（154 个，ODbL 已在前端署名）。
+      Overpass 要求自报 User-Agent，否则 406。
+- [x] 官方避暑室：发现并接入 Kühle Räume (Hitzeschutz) WFS（111 个：教堂、
+      社区中心等，含开放时间与轮椅无障碍字段）。注意：媒体报道的
+      Hitze-Navigator 含商业场所（超市/商场），但那不是开放数据，未纳入。
 - [ ] 空调普及率无直接数据 — MVP 留空，README 注明。
 
 ## 数据源核对记录（2026-07-13，全部经 GetCapabilities + resultType=hits 验证）
@@ -24,6 +27,8 @@
 | strassenbaeume | baumbestand / strassenbaeume | 434765 ✓ | 25833 | (点位, bezirk) | 2025 |
 | gruenanlagen | gruenanlagen / gruenanlagen | 2563 ✓ | 25833 | namenr, katasterfl | 2025 |
 | trinkbrunnen | trinkwasserbrunnen / trinkwasserbrunnen | 242 ✓ | 25833 | trinkbrunnenart, standort | 2025 |
+| kuehle_raeume | kuehle_raeume / kuehle_raeume | 111 ✓ | 25833 | kuehle_raeume, adresse, oeffnungszeiten, rollstuhlgerechter_zugang | 2025 |
+| bibliotheken_osm | Overpass amenity=library (DE-BE) | 154 | 4326 | name, wheelchair, opening_hours | 2026 |
 
 ### 怪癖与决策
 - **气候图层按用地类型分三组**（Siedlung / Verkehr / Grün-Freiflächen）。暴露聚合
