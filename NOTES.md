@@ -47,3 +47,29 @@
 ## 已知约束
 - FIS-Broker / gdi.berlin.de 的 WFS 不能直接喂前端，须离线转 GeoJSON
 - 缺失值策略：保留 NaN，归一化时排除，绝不静默填零
+
+## 敏感性检验结论（阶段 5，2026-07-13）
+
+敏感性检验（各情景最脆弱前 20 名）：
+  equal: 与 equal 重叠 20/20
+  exposure_heavy: 与 equal 重叠 17/20
+  sensitivity_heavy: 与 equal 重叠 17/20
+  capacity_heavy: 与 equal 重叠 16/20
+  全部 4 组情景交集（稳定高危）: 11 个
+    - 05200421 Spandauer Straße
+    - 07501133 Fritz-Werner-Straße
+    - 07601236 Marienfelder Allee Nordwest
+    - 07601238 Marienfelde Nordost
+    - 07601443 Töpchiner Weg
+    - 08200833 Buckow Ost
+    - 08401138 Goldhähnchenweg
+    - 08401139 Vogelviertel Süd
+    - 11200410 Malchower Weg
+    - 11200411 Hauptstraße
+    - 12200307 Reinickes Hof
+解读：四组权重情景下前 20 名重叠 15–17/20，11 个 PLR 进入全情景交集，
+结论对权重选择相对稳健。稳定高危街区集中在外环南部/东部（Marienfelde、
+Buckow、Rudow、Spandau、Hohenschönhausen 边缘），共同特征是 PET 高
+（开阔无遮荫建成区）、老龄占比高、行道树密度低 —— 而非市中心贫困街区，
+这与"热浪脆弱 ≠ 社会脆弱地图的简单复刻"的预期一致。
+无人/数据不足 PLR（人口<100 或缺维度）不参与排名，共 6 个。

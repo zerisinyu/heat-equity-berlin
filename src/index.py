@@ -14,6 +14,7 @@ import pandas as pd
 from common import DATA_PROCESSED
 
 OUT = DATA_PROCESSED / "plr_index.parquet"
+MIN_POP = 100  # 人口低于此的 PLR 不参与排名（统计噪声）
 
 
 def percentile_normalize(s: pd.Series, direction: str) -> pd.Series:
@@ -37,6 +38,7 @@ def weighted_mean_renormalized(df: pd.DataFrame, weights: dict) -> pd.Series:
 
 def build_index(cfg: dict, indicators: pd.DataFrame,
                 dim_weights: dict) -> pd.DataFrame:
+    indicators_pop = indicators
     out = pd.DataFrame(index=indicators.index)
     dim_scores = {}
     for dim, inds in cfg["indicators"].items():
@@ -50,7 +52,15 @@ def build_index(cfg: dict, indicators: pd.DataFrame,
         dim_scores[dim] = weighted_mean_renormalized(out, norm_cols)
         out[f"dim_{dim}"] = dim_scores[dim]
     dims = pd.DataFrame(dim_scores)
-    out["heat_vulnerability"] = weighted_mean_renormalized(dims, dim_weights)
+    hv = weighted_mean_renormalized(dims, dim_weights)
+
+    # 最低数据要求：三个维度分齐全，且人口 ≥ MIN_POP。
+    # 否则总指数 = NaN（"数据不足"），防止无人 PLR（货运场站、森林）
+    # 靠一两个维度的重归一权重登顶 —— 这不是脆弱，是噪声。
+    complete = dims.notna().all(axis=1)
+    if "pop_total" in indicators_pop.columns:
+        complete &= indicators_pop["pop_total"].fillna(0) >= MIN_POP
+    out["heat_vulnerability"] = hv.where(complete)
     return out
 
 
