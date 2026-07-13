@@ -19,6 +19,7 @@ STEPS = [
     ("indicators", "敏感与应对能力指标"),
     ("index", "归一化与加权合成指数"),
     ("refuges", "降温点图层"),
+    ("surfaces", "平滑热力表面 PNG"),
     ("export", "导出前端 GeoJSON"),
 ]
 

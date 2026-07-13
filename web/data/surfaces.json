@@ -1,0 +1,1 @@
+{"corners": [[13.07745, 52.669667], [13.754351, 52.678715], [13.763905, 52.339518], [13.09219, 52.330579]], "metrics": {"heat_vulnerability": {"lo": 0.366, "hi": 0.661}, "dim_exposure": {"lo": 0.11, "hi": 0.701}, "dim_sensitivity": {"lo": 0.252, "hi": 0.707}, "dim_adaptive_capacity_lack": {"lo": 0.292, "hi": 0.951}}}

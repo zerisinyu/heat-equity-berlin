@@ -11,37 +11,22 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
   :root {
-    --surface: rgba(252, 252, 251, .94);
-    --surface-solid: #fcfcfb;
-    --ink: #191817;
-    --ink-2: #52514e;
-    --ink-3: #8a887f;
-    --line: rgba(25, 24, 23, .09);
+    --surface: rgba(253, 252, 250, .94);
+    --surface-solid: #fdfcfa;
+    --ink: #221f1e;
+    --ink-2: #57534e;
+    --ink-3: #948f88;
+    --line: rgba(34, 31, 30, .08);
     --accent: #0e7a6e;
     --accent-soft: rgba(14, 122, 110, .09);
-    --danger: #9a3412;
+    --danger: #a4356b;
     --radius: 14px;
-    --shadow: 0 1px 2px rgba(20, 18, 12, .05), 0 8px 28px rgba(20, 18, 12, .13);
-    --exposure: #d94f2b;
-    --sensitivity: #6d5fc4;
+    --shadow: 0 1px 2px rgba(40, 24, 32, .05), 0 8px 28px rgba(40, 24, 32, .13);
+    --exposure: #e06a55;
+    --sensitivity: #8f4e86;
     --capacity: #0e7a6e;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --surface: rgba(26, 26, 25, .93);
-      --surface-solid: #1f1f1e;
-      --ink: #f3f2ee;
-      --ink-2: #c3c2b7;
-      --ink-3: #8a887f;
-      --line: rgba(243, 242, 238, .1);
-      --accent: #35b3a2;
-      --accent-soft: rgba(53, 179, 162, .14);
-      --danger: #f0a082;
-      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 32px rgba(0, 0, 0, .5);
-      --exposure: #e8734f;
-      --sensitivity: #988ce0;
-      --capacity: #35b3a2;
-    }
+    /* sunset-berry ramp — must match src/surfaces.py RAMP */
+    --ramp: linear-gradient(90deg, #FEF6EC, #FBCB97, #F58B76, #C94F7C, #7D2E68);
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -50,7 +35,7 @@
     font: 400 13.5px/1.5 "Inter", -apple-system, "Segoe UI", sans-serif;
     font-feature-settings: "cv05", "cv11";
   }
-  #map { position: absolute; inset: 0; background: #e8e6e1; }
+  #map { position: absolute; inset: 0; background: #eceae5; }
 
   .panel {
     position: absolute; z-index: 5;
@@ -121,11 +106,10 @@
 
   /* legend */
   .legend { border-top: 1px solid var(--line); padding-top: 14px; }
-  .legend-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 2px 0 5px; }
-  .legend-bar span { flex: 1; }
-  .legend-ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+  .legend-bar { height: 10px; border-radius: 5px; background: var(--ramp); margin: 2px 0 5px; }
+  .legend-ticks { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); margin-bottom: 10px; }
   .legend-row { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-2); padding: 2px 0; }
-  .legend-row .chip { width: 18px; height: 10px; border-radius: 3px; flex: none; border: 1px solid var(--line); }
+  .legend-row .chip { width: 18px; height: 10px; border-radius: 3px; flex: none; border: 1px dashed var(--ink-3); }
   .legend-row .pt { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px var(--surface-solid), 0 0 3px rgba(0,0,0,.4); }
 
   details { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
@@ -175,7 +159,6 @@
   .facts { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
   .facts .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 12.5px; }
   .facts .k { color: var(--ink-2); }
-  .facts .k small { color: var(--ink-3); }
   .facts .v { font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
   .facts .group { margin: 8px 0 2px; }
 
@@ -214,7 +197,7 @@
 
   <p class="label">Map layer</p>
   <div class="seg" id="metricBtns">
-    <button data-m="heat_vulnerability" class="active" style="--dot:#b30000">
+    <button data-m="heat_vulnerability" class="active" style="--dot:#C94F7C">
       <span class="swatch-dot"></span>
       <span>Combined index<small>All three dimensions, weighted</small></span>
     </button>
@@ -244,12 +227,14 @@
   <details>
     <summary>What this map is — and isn’t</summary>
     <div class="body">
-      The index combines <b>exposure</b> (PET, UTCI, night-time cooling, 2022),
-      <b>sensitivity</b> (age structure 2025, social indicators 2023) and
-      <b>coping capacity</b> (street trees, green space, fountain distance, 2025).
-      Weights are documented choices, not objective truth. Area averages don’t
-      describe any individual. The map points to <b>where help should arrive
-      first</b> — it is not a label on any neighbourhood.
+      The surface blends each planning area’s score into a smooth gradient for
+      readability — values come from area statistics, softly feathered at the edges
+      (≈300 m), not from a physical model. The index combines <b>exposure</b>
+      (PET, UTCI, night-time cooling, 2022), <b>sensitivity</b> (age structure 2025,
+      social indicators 2023) and <b>coping capacity</b> (street trees, green space,
+      fountain distance, 2025). Weights are documented choices, not objective truth.
+      Area averages don’t describe any individual. The map points to <b>where help
+      should arrive first</b> — it is not a label on any neighbourhood.
       Method &amp; limits: see README.
     </div>
   </details>
@@ -267,13 +252,10 @@ const METRICS = {
   dim_sensitivity: 'Sensitivity',
   dim_adaptive_capacity_lack: 'Lack of coping capacity',
 };
-// ColorBrewer OrRd (sequential, single warm family, lightness-monotonic)
-const RAMP = ['#fef0d9', '#fdcc8a', '#fc8d59', '#e34a33', '#b30000'];
-const NODATA_LIGHT = '#d8d6d0', NODATA_DARK = '#3a3a38';
-const DARK = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const NODATA = DARK ? NODATA_DARK : NODATA_LIGHT;
-const FOUNTAIN_C = DARK ? '#4fa8e8' : '#1d6fb8';
-const PARK_C = DARK ? '#4fae57' : '#2e7d36';
+// must match src/surfaces.py RAMP
+const RAMP = ['#FEF6EC', '#FBCB97', '#F58B76', '#C94F7C', '#7D2E68'];
+const FOUNTAIN_C = '#1d6fb8';
+const PARK_C = '#2e7d36';
 
 const map = new maplibregl.Map({
   container: 'map',
@@ -282,7 +264,7 @@ const map = new maplibregl.Map({
     sources: {
       basemap: {
         type: 'raster',
-        tiles: [`https://basemaps.cartocdn.com/${DARK ? 'dark_all' : 'light_all'}/{z}/{x}/{y}@2x.png`],
+        tiles: ['https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
         tileSize: 256,
         attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> · Data: Berlin Open Data (gdi.berlin.de, dl-de/by-2-0 &amp; CC-BY)',
       },
@@ -297,74 +279,61 @@ map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom
 // keep the city centred in the space right of the control panel
 if (window.innerWidth > 760) map.jumpTo({ center: [13.404, 52.507], padding: { left: 348 } });
 
-let currentMetric = 'heat_vulnerability', breaks = {}, hoveredId = null;
-
-function quantileBreaks(values, k = 5) {
-  const v = values.filter(x => x != null && isFinite(x)).sort((a, b) => a - b);
-  const b = [];
-  for (let i = 1; i < k; i++) b.push(v[Math.floor(i * v.length / k)]);
-  return b;
-}
-
-function fillExpression(metric) {
-  const b = breaks[metric];
-  const step = ['step', ['get', metric], RAMP[0]];
-  b.forEach((br, i) => step.push(br, RAMP[i + 1]));
-  return ['case', ['==', ['typeof', ['get', metric]], 'number'], step, NODATA];
-}
+let currentMetric = 'heat_vulnerability', hoveredId = null;
 
 function renderLegend() {
-  const b = breaks[currentMetric];
-  const fmt = x => x.toFixed(2);
   document.getElementById('legend').innerHTML = `
-    <p class="label" style="margin-bottom:6px">${METRICS[currentMetric]} · percentile quintiles</p>
-    <div class="legend-bar">${RAMP.map(c => `<span style="background:${c}"></span>`).join('')}</div>
-    <div class="legend-ticks"><span>lower need</span><span>${fmt(b[0])}</span><span>${fmt(b[2])}</span><span>higher need</span></div>
-    <div class="legend-row"><span class="chip" style="background:${NODATA}"></span>Insufficient data · population &lt; 100</div>
+    <p class="label" style="margin-bottom:6px">${METRICS[currentMetric]} · smoothed surface</p>
+    <div class="legend-bar"></div>
+    <div class="legend-ticks"><span>lower need</span><span>higher need</span></div>
+    <div class="legend-row"><span class="chip"></span>Uncoloured: not ranked (population &lt; 100 or incomplete data)</div>
     <div class="legend-row"><span class="pt" style="background:${FOUNTAIN_C}"></span>Drinking fountain
       <span class="pt" style="background:${PARK_C};margin-left:10px"></span>Park</div>`;
 }
 
 async function init() {
-  const [plr, refuges] = await Promise.all([
+  const [plr, refuges, surf] = await Promise.all([
     fetch('data/plr.geojson').then(r => r.json()),
     fetch('data/refuges.geojson').then(r => r.json()),
+    fetch('data/surfaces.json').then(r => r.json()),
   ]);
+
+  // one smooth raster surface per metric; switch by visibility
   for (const m of Object.keys(METRICS)) {
-    breaks[m] = quantileBreaks(plr.features.map(f => f.properties[m]));
+    map.addSource(`surf-${m}`, { type: 'image', url: `data/surface_${m}.png`, coordinates: surf.corners });
+    map.addLayer({
+      id: `surf-${m}`, type: 'raster', source: `surf-${m}`,
+      layout: { visibility: m === currentMetric ? 'visible' : 'none' },
+      paint: { 'raster-opacity': 0.82, 'raster-resampling': 'linear', 'raster-fade-duration': 150 },
+    });
   }
 
   map.addSource('plr', { type: 'geojson', data: plr, promoteId: 'plr_id' });
   map.addSource('refuges', { type: 'geojson', data: refuges });
 
+  // invisible hit layer — districts stay clickable without hard edges
   map.addLayer({
     id: 'plr-fill', type: 'fill', source: 'plr',
-    paint: {
-      'fill-color': fillExpression(currentMetric),
-      'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.92, 0.74],
-    },
-  });
-  map.addLayer({
-    id: 'plr-line', type: 'line', source: 'plr',
-    paint: { 'line-color': DARK ? '#000' : '#fff', 'line-width': 0.6, 'line-opacity': 0.6 },
+    paint: { 'fill-color': '#000', 'fill-opacity': 0.01 },
   });
   map.addLayer({
     id: 'plr-hover-line', type: 'line', source: 'plr',
     filter: ['==', ['get', 'plr_id'], ''],
-    paint: { 'line-color': DARK ? '#f3f2ee' : '#191817', 'line-width': 1.6 },
+    paint: { 'line-color': '#221f1e', 'line-width': 1.6, 'line-opacity': .8 },
   });
   map.addLayer({
     id: 'plr-stable', type: 'line', source: 'plr',
     filter: ['==', ['get', 'stable_high_risk'], true],
     layout: { visibility: 'none' },
-    paint: { 'line-color': DARK ? '#f3f2ee' : '#191817', 'line-width': 2, 'line-dasharray': [1.4, .9] },
+    paint: { 'line-color': '#221f1e', 'line-width': 1.8, 'line-dasharray': [1.4, .9], 'line-opacity': .75 },
   });
   map.addLayer({
     id: 'parks', type: 'circle', source: 'refuges',
     filter: ['==', ['get', 'type'], 'park'],
     paint: {
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.2, 14, 5.5],
-      'circle-color': PARK_C, 'circle-stroke-color': DARK ? '#1a1a19' : '#fff', 'circle-stroke-width': 1,
+      'circle-color': PARK_C, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1,
+      'circle-opacity': .85,
     },
   });
   map.addLayer({
@@ -372,21 +341,20 @@ async function init() {
     filter: ['==', ['get', 'type'], 'fountain'],
     paint: {
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.8, 14, 6.5],
-      'circle-color': FOUNTAIN_C, 'circle-stroke-color': DARK ? '#1a1a19' : '#fff', 'circle-stroke-width': 1.2,
+      'circle-color': FOUNTAIN_C, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.2,
     },
   });
 
   map.on('click', 'plr-fill', e => showDetail(e.features[0].properties));
   map.on('mousemove', 'plr-fill', e => {
     const id = e.features[0].properties.plr_id;
-    if (hoveredId !== null) map.setFeatureState({ source: 'plr', id: hoveredId }, { hover: false });
-    hoveredId = id;
-    map.setFeatureState({ source: 'plr', id }, { hover: true });
-    map.setFilter('plr-hover-line', ['==', ['get', 'plr_id'], id]);
+    if (id !== hoveredId) {
+      hoveredId = id;
+      map.setFilter('plr-hover-line', ['==', ['get', 'plr_id'], id]);
+    }
     map.getCanvas().style.cursor = 'pointer';
   });
   map.on('mouseleave', 'plr-fill', () => {
-    if (hoveredId !== null) map.setFeatureState({ source: 'plr', id: hoveredId }, { hover: false });
     hoveredId = null;
     map.setFilter('plr-hover-line', ['==', ['get', 'plr_id'], '']);
     map.getCanvas().style.cursor = '';
@@ -453,9 +421,11 @@ function hideDetail() { document.getElementById('detail').style.display = 'none'
 
 document.getElementById('metricBtns').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
+  const prev = currentMetric;
   currentMetric = btn.dataset.m;
   document.querySelectorAll('.seg button').forEach(b => b.classList.toggle('active', b === btn));
-  map.setPaintProperty('plr-fill', 'fill-color', fillExpression(currentMetric));
+  if (map.getLayer(`surf-${prev}`)) map.setLayoutProperty(`surf-${prev}`, 'visibility', 'none');
+  if (map.getLayer(`surf-${currentMetric}`)) map.setLayoutProperty(`surf-${currentMetric}`, 'visibility', 'visible');
   renderLegend();
 });
 document.getElementById('tFountain').addEventListener('change', e =>
