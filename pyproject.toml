@@ -1,0 +1,12 @@
+[project]
+name = "heat-equity-berlin"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "geopandas>=1.1.4",
+    "matplotlib>=3.11.0",
+    "owslib>=0.36.0",
+    "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+]
