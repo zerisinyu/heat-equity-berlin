@@ -86,6 +86,10 @@ def fetch_wfs_layer(base: str, service: str, layer: str,
 def fetch_csv(url: str, out_path) -> None:
     r = requests.get(url, timeout=TIMEOUT)
     r.raise_for_status()
+    # 统计局网站改版后对任意路径返回 SPA 首页（HTTP 200 + HTML）——
+    # 内容校验，绝不把 HTML 存成 .csv 毒害缓存
+    if r.content.lstrip()[:1] == b"<":
+        raise RuntimeError(f"{url} 返回 HTML 而非 CSV（站点软 404），不缓存")
     out_path.write_bytes(r.content)
 
 

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>柏林热浪不平等地图 · Hitzevorsorge Berlin</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+  :root {
+    --panel-bg: rgba(255,255,255,.96); --ink: #1a1a1a; --muted: #666;
+    --accent: #0b6e6e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 -apple-system, "Segoe UI", "Noto Sans SC", sans-serif; color: var(--ink); }
+  #map { position: absolute; inset: 0; }
+
+  .panel {
+    position: absolute; z-index: 5; background: var(--panel-bg);
+    border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.18); padding: 12px 14px;
+  }
+  #controls { top: 12px; left: 12px; width: 300px; max-height: calc(100% - 24px); overflow-y: auto; }
+  #controls h1 { font-size: 17px; margin: 0 0 2px; }
+  #controls .sub { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+
+  .metric-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .metric-btns button {
+    padding: 7px 6px; border: 1px solid #ccc; border-radius: 7px; background: #fff;
+    cursor: pointer; font-size: 12.5px; text-align: left;
+  }
+  .metric-btns button.active { border-color: var(--accent); background: #e8f4f4; font-weight: 600; }
+
+  .toggles label { display: flex; align-items: center; gap: 7px; padding: 3px 0; cursor: pointer; font-size: 13px; }
+  .legend { margin-top: 10px; font-size: 12px; }
+  .legend .row { display: flex; align-items: center; gap: 7px; padding: 1.5px 0; }
+  .legend .swatch { width: 22px; height: 13px; border-radius: 3px; border: 1px solid rgba(0,0,0,.15); flex: none; }
+  .legend .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; border: 1.5px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,.5); }
+
+  #detail { top: 12px; right: 12px; width: 330px; max-height: calc(100% - 24px); overflow-y: auto; display: none; }
+  #detail h2 { font-size: 15px; margin: 0 0 2px; }
+  #detail .close { position: absolute; top: 8px; right: 11px; cursor: pointer; border: none; background: none; font-size: 17px; color: var(--muted); }
+  .dim { margin: 9px 0; }
+  .dim .name { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 3px; }
+  .bar { height: 9px; background: #eee; border-radius: 5px; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 5px; }
+  .facts { margin-top: 10px; border-top: 1px solid #e2e2e2; padding-top: 8px; font-size: 12.5px; }
+  .facts div { display: flex; justify-content: space-between; padding: 1.5px 0; }
+  .facts .v { font-variant-numeric: tabular-nums; color: #333; }
+  .badge { display: inline-block; background: #7a2e0e; color: #fff; border-radius: 5px; padding: 2px 7px; font-size: 11.5px; margin-top: 6px; }
+  .note { color: var(--muted); font-size: 11.5px; margin-top: 10px; border-top: 1px solid #e2e2e2; padding-top: 8px; }
+  a { color: var(--accent); }
+  details summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="controls" class="panel">
+  <h1>柏林热浪不平等地图</h1>
+  <div class="sub">哪些街区在高温下需要优先关照 · 最近的降温点在哪</div>
+
+  <div class="metric-btns" id="metricBtns">
+    <button data-m="heat_vulnerability" class="active">综合指数</button>
+    <button data-m="dim_exposure">暴露 · 有多热</button>
+    <button data-m="dim_sensitivity">敏感 · 谁更脆弱</button>
+    <button data-m="dim_adaptive_capacity_lack">应对 · 能否躲避</button>
+  </div>
+
+  <div class="toggles">
+    <label><input type="checkbox" id="tFountain" checked> 💧 饮水台（5–10 月运行）</label>
+    <label><input type="checkbox" id="tPark" checked> 🌳 公园绿地（≥1 公顷）</label>
+    <label><input type="checkbox" id="tStable"> ⬛ 标出多组权重下稳定的高优先街区</label>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <details style="margin-top:10px">
+    <summary>这张图是什么，不是什么</summary>
+    <div class="note" style="border:none;padding-top:6px">
+      指数由暴露（PET/UTCI/夜间降温，2022）、敏感（年龄结构 2025、社会指标 2023）、
+      应对能力（行道树、绿地、饮水台距离，2025）合成，权重是可质疑的取舍而非客观真相。
+      街区平均值不代表街区里任何一个人的处境。它标示的是<b>需要优先送达帮助的地方</b>，
+      不是给社区贴标签。方法与局限见 README。
+    </div>
+  </details>
+</div>
+
+<div id="detail" class="panel">
+  <button class="close" onclick="hideDetail()">×</button>
+  <div id="detailBody"></div>
+</div>
+
+<script>
+const METRICS = {
+  heat_vulnerability: '综合指数',
+  dim_exposure: '暴露维度',
+  dim_sensitivity: '敏感维度',
+  dim_adaptive_capacity_lack: '缺乏应对能力维度',
+};
+// ColorBrewer YlOrRd 5 档（色盲友好序列色）
+const RAMP = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026'];
+const NODATA = '#d9d9d9';
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: {
+    version: 8,
+    sources: {
+      basemap: {
+        type: 'raster',
+        tiles: ['https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
+        tileSize: 256,
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a> · 数据: 柏林开放数据 (gdi.berlin.de, dl-de/by-2-0 & CC-BY)',
+      },
+    },
+    layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
+  },
+  center: [13.404, 52.507],
+  zoom: 9.7,
+  minZoom: 8.5,
+});
+map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+
+let plrData, currentMetric = 'heat_vulnerability', breaks = {};
+
+function quantileBreaks(values, k = 5) {
+  const v = values.filter(x => x != null && isFinite(x)).sort((a, b) => a - b);
+  const b = [];
+  for (let i = 1; i < k; i++) b.push(v[Math.floor(i * v.length / k)]);
+  return b;
+}
+
+function fillExpression(metric) {
+  const b = breaks[metric];
+  const step = ['step', ['get', metric], RAMP[0]];
+  b.forEach((br, i) => step.push(br, RAMP[i + 1]));
+  return ['case', ['==', ['typeof', ['get', metric]], 'number'], step, NODATA];
+}
+
+function renderLegend() {
+  const b = breaks[currentMetric];
+  const fmt = x => x.toFixed(2);
+  const labels = [
+    `低（< ${fmt(b[0])}）`,
+    ...b.slice(0, -1).map((br, i) => `${fmt(br)} – ${fmt(b[i + 1])}`),
+    `高（≥ ${fmt(b[b.length - 1])}）`,
+  ];
+  document.getElementById('legend').innerHTML =
+    `<b>${METRICS[currentMetric]}</b>（0–1 百分位，五分位分级）` +
+    RAMP.map((c, i) => `<div class="row"><span class="swatch" style="background:${c}"></span>${labels[i]}</div>`).join('') +
+    `<div class="row"><span class="swatch" style="background:${NODATA}"></span>数据不足 / 常住人口 &lt; 100</div>` +
+    `<div class="row" style="margin-top:4px"><span class="dot" style="background:#1f78b4"></span>饮水台 <span class="dot" style="background:#33a02c;margin-left:8px"></span>公园</div>`;
+}
+
+async function init() {
+  const [plr, refuges] = await Promise.all([
+    fetch('data/plr.geojson').then(r => r.json()),
+    fetch('data/refuges.geojson').then(r => r.json()),
+  ]);
+  plrData = plr;
+  for (const m of Object.keys(METRICS)) {
+    breaks[m] = quantileBreaks(plr.features.map(f => f.properties[m]));
+  }
+
+  map.addSource('plr', { type: 'geojson', data: plr });
+  map.addSource('refuges', { type: 'geojson', data: refuges });
+
+  map.addLayer({
+    id: 'plr-fill', type: 'fill', source: 'plr',
+    paint: { 'fill-color': fillExpression(currentMetric), 'fill-opacity': 0.72 },
+  });
+  map.addLayer({
+    id: 'plr-line', type: 'line', source: 'plr',
+    paint: { 'line-color': '#fff', 'line-width': 0.6, 'line-opacity': 0.7 },
+  });
+  map.addLayer({
+    id: 'plr-stable', type: 'line', source: 'plr',
+    filter: ['==', ['get', 'stable_high_risk'], true],
+    layout: { visibility: 'none' },
+    paint: { 'line-color': '#1a1a1a', 'line-width': 2.2 },
+  });
+  map.addLayer({
+    id: 'parks', type: 'circle', source: 'refuges',
+    filter: ['==', ['get', 'type'], 'park'],
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.5, 14, 6],
+      'circle-color': '#33a02c', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1,
+    },
+  });
+  map.addLayer({
+    id: 'fountains', type: 'circle', source: 'refuges',
+    filter: ['==', ['get', 'type'], 'fountain'],
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3, 14, 7],
+      'circle-color': '#1f78b4', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.2,
+    },
+  });
+
+  map.on('click', 'plr-fill', e => showDetail(e.features[0].properties));
+  map.on('mouseenter', 'plr-fill', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'plr-fill', () => map.getCanvas().style.cursor = '');
+  map.on('click', 'fountains', e => {
+    const p = e.features[0].properties;
+    new maplibregl.Popup().setLngLat(e.lngLat).setHTML(
+      `<b>💧 ${p.name}</b><br>${p.detail}${p.accessible === true || p.accessible === 'true' ? ' · ♿ 无障碍' : ''}` +
+      `<br><small>运行季节 ${p.season}${p.note ? ' · ' + p.note : ''}</small>`).addTo(map);
+  });
+  map.on('click', 'parks', e => {
+    const p = e.features[0].properties;
+    new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`<b>🌳 ${p.name}</b><br><small>${p.detail}</small>`).addTo(map);
+  });
+
+  renderLegend();
+}
+
+function pct(x) { return x == null || !isFinite(x) ? '—' : Math.round(x * 100) + '%'; }
+function num(x, d = 1, unit = '') { return x == null || !isFinite(x) ? '数据不足' : (+x).toFixed(d) + unit; }
+
+function showDetail(p) {
+  const dims = [
+    ['暴露 · 这里有多热', p.dim_exposure, '#f03b20'],
+    ['敏感 · 居民有多脆弱', p.dim_sensitivity, '#6a51a3'],
+    ['应对 · 有多难躲避', p.dim_adaptive_capacity_lack, '#0b6e6e'],
+  ];
+  const hv = p.heat_vulnerability;
+  document.getElementById('detailBody').innerHTML = `
+    <h2>${p.plr_name}</h2>
+    <div style="color:var(--muted);font-size:12px">Planungsraum ${p.plr_id} · 常住 ${p.pop_total ? Math.round(p.pop_total).toLocaleString() : '?'} 人</div>
+    ${(hv == null || !isFinite(hv))
+      ? '<p>该街区常住人口过少或数据不全，不参与排名。</p>'
+      : `<div class="dim"><div class="name"><b>综合指数</b><b>${(+hv).toFixed(2)}</b></div>
+           <div class="bar"><div style="width:${hv * 100}%;background:#7a2e0e"></div></div></div>` +
+        dims.map(([n, v, c]) => `
+          <div class="dim"><div class="name"><span>${n}</span><span>${v == null ? '—' : (+v).toFixed(2)}</span></div>
+          <div class="bar"><div style="width:${(v || 0) * 100}%;background:${c}"></div></div></div>`).join('')}
+    ${p.stable_high_risk === true || p.stable_high_risk === 'true'
+      ? '<span class="badge">多组权重下均属最需优先关照的街区</span>' : ''}
+    <div class="facts">
+      <div><span>白天体感 PET（2022）</span><span class="v">${num(p.pet_day, 1, ' °C')}</span></div>
+      <div><span>夜间降温幅度（2022）</span><span class="v">${num(p.night_cooling, 2, ' K/h')}</span></div>
+      <div><span>65 岁以上占比（2025）</span><span class="v">${pct(p.share_65plus)}</span></div>
+      <div><span>6 岁以下占比（2025）</span><span class="v">${pct(p.share_0to6)}</span></div>
+      <div><span>领取转移支付比例（2023）</span><span class="v">${num(p.transfer_income, 1, ' %')}</span></div>
+      <div><span>儿童贫困率（2023）</span><span class="v">${num(p.child_poverty, 1, ' %')}</span></div>
+      <div><span>行道树密度</span><span class="v">${num(p.street_tree_density, 0, ' 棵/km²')}</span></div>
+      <div><span>公共绿地覆盖</span><span class="v">${pct(p.green_share)}</span></div>
+      <div><span>街区中心到最近饮水台</span><span class="v">${num(p.dist_to_fountain, 0, ' m')}</span></div>
+    </div>
+    <div class="note">数值为街区平均/汇总，不代表街区内每个人的处境；各数据年份不同，已逐项标注。</div>`;
+  document.getElementById('detail').style.display = 'block';
+}
+function hideDetail() { document.getElementById('detail').style.display = 'none'; }
+
+document.getElementById('metricBtns').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  currentMetric = btn.dataset.m;
+  document.querySelectorAll('.metric-btns button').forEach(b => b.classList.toggle('active', b === btn));
+  map.setPaintProperty('plr-fill', 'fill-color', fillExpression(currentMetric));
+  renderLegend();
+});
+document.getElementById('tFountain').addEventListener('change', e =>
+  map.setLayoutProperty('fountains', 'visibility', e.target.checked ? 'visible' : 'none'));
+document.getElementById('tPark').addEventListener('change', e =>
+  map.setLayoutProperty('parks', 'visibility', e.target.checked ? 'visible' : 'none'));
+document.getElementById('tStable').addEventListener('change', e =>
+  map.setLayoutProperty('plr-stable', 'visibility', e.target.checked ? 'visible' : 'none'));
+
+map.on('load', init);
+</script>
+</body>
+</html>

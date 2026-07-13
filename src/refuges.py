@@ -46,7 +46,9 @@ def load_parks(cfg: dict, working: str) -> gpd.GeoDataFrame:
         "type": "park",
         "name": g[fm["name"]].fillna("Grünanlage").astype(str),
         "detail": (g.geometry.area / 1e4).round(1).astype(str) + " ha",
-        "accessible": pd.NA,
+        # 公园无"无障碍"数据，用 False 而非 NA：混入 NA 会让整列被
+        # 序列化成字符串 'True'/'False'，前端布尔判断悄悄失效
+        "accessible": False,
         "note": "",
         "season": "全年",
     }, geometry=g.geometry.representative_point())
