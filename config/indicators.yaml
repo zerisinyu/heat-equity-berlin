@@ -1,148 +1,166 @@
 # =====================================================================
 # 柏林热浪不平等地图 — 数据源、字段映射与权重配置
 #
-# 纪律：
-# - endpoint 一律先请求 GetCapabilities 验证，verified: false 的条目
-#   表示端点/图层名尚未确认，阶段 1 逐个填实。
-# - 字段映射（field_map）在 inspect 原始数据后填写，不凭记忆猜。
-# - 所有权重集中在 weights 段，权重是价值判断，改这里即可重算。
+# 所有 WFS 端点均已于 2026-07-13 通过 GetCapabilities 验证（verified: true），
+# 要素总数经 resultType=hits 核对，字段名来自实际抓样，非记忆。
+# 所有权重集中在 weights 段 — 权重是价值判断，改这里即可重算。
 # =====================================================================
 
 crs:
   working: "EPSG:25833"   # ETRS89 / UTM 33N — 空间连接与面积计算
   output: "EPSG:4326"     # Web 地图导出
 
+wfs_base: "https://gdi.berlin.de/services/wfs"
+
 sources:
   # ---- 地理底座 -------------------------------------------------------
   lor_planungsraum:
     description: "LOR Planungsräume（542 个规划空间，2021 版）"
     type: wfs
-    endpoint: null            # 阶段 1 通过 gdi.berlin.de 检索确认
-    layer: null
+    service: lor_2021
+    layer: "lor_2021:a_lor_plr_2021"
+    expected_count: 542
     license: "CC-BY-3.0-DE"
-    year: null
-    verified: false
+    year: 2021
+    verified: true
     field_map:
-      id: null                # Planungsraum 键（如 PLR_ID）
-      name: null
+      id: plr_id
+      name: plr_name
 
-  # ---- 暴露维度 -------------------------------------------------------
-  klimaanalyse:
-    description: "Klimaanalysekarten 2022（街区块聚合版，含 PET/UTCI/夜间降温）"
+  # ---- 暴露维度（Klimaanalysekarten 2022，Siedlungsflächen 街区块版）----
+  # 注意：气候图层按用地类型分 Siedlung/Verkehr/Grünflächen 三组，
+  # 人口居住在 Siedlungsflächen，暴露聚合只用 _siedlg_ 图层（16217 块）。
+  # 纯绿地/水域 PLR 可能无 Siedlung 块 → 暴露为缺失，不填零。
+  klima_pet:
+    description: "PET 14:00 评价指数 [°C]，Siedlungsflächen"
     type: wfs
-    endpoint: null
-    layer: null
+    service: ua_klimaanalyse_2022
+    layer: "ua_klimaanalyse_2022:pa_ua_pet_siedlg_2022"
+    expected_count: 16217
     license: "dl-de-by-2.0"
     year: 2022
-    verified: false
-    field_map:
-      pet: null               # 白天人体热应激 PET
-      utci: null              # UTCI
-      night_cooling: null     # 夜间降温（不足）指标
-      air_temp: null
+    verified: true
+    field_map: { value: pet14h, block_id: schl5 }
+
+  klima_utci:
+    description: "UTCI 14:00 评价指数 [°C]，Siedlungsflächen"
+    type: wfs
+    service: ua_klimaanalyse_2022
+    layer: "ua_klimaanalyse_2022:ra_ua_utci_siedlg_2022"
+    expected_count: 16217
+    license: "dl-de-by-2.0"
+    year: 2022
+    verified: true
+    field_map: { value: utci14h, block_id: schl5 }
+
+  klima_abkuehl:
+    description: "夜间降温 22:00–04:00 [K]，Siedlungsflächen（值越小夜里越降不下来）"
+    type: wfs
+    service: ua_klimaanalyse_2022
+    layer: "ua_klimaanalyse_2022:na_ua_abkuehl_siedlg_2022"
+    expected_count: 16217
+    license: "dl-de-by-2.0"
+    year: 2022
+    verified: true
+    field_map: { value: abkuehlmea, block_id: schl5 }
 
   # ---- 敏感维度 -------------------------------------------------------
   mss:
-    description: "Monitoring Soziale Stadtentwicklung（按 Planungsraum）"
+    description: "MSS 2023 Index-Indikatoren（按 Planungsraum，542）"
     type: wfs
-    endpoint: null
-    layer: null
+    service: mss_2023
+    layer: "mss_2023:mss2023_indexind_542"
+    expected_count: 542
     license: "dl-de-by-2.0"
-    year: null
-    verified: false
+    year: 2023
+    verified: true
+    # s1–s4 = Status（比例 %），d1–d4 = Dynamik（两年变化，弃用）。
+    # 排序按 MSS 2023 报告：1 失业，2 单亲家庭儿童（2023 新增），
+    # 3 转移支付，4 儿童贫困（U15 SGB II）。已用数值范围抽样验证。
     field_map:
-      plr_id: null
-      unemployment: null
-      child_poverty: null
-      transfer_income: null
+      plr_id: plr_id
+      unemployment: s1
+      single_parent_children: s2
+      transfer_income: s3
+      child_poverty: s4
 
   population_age:
-    description: "人口年龄结构（AfS Berlin-Brandenburg，按 LOR）"
+    description: "Einwohnerregisterstatistik，LOR-Planungsräume，31.12.2025"
     type: csv
-    endpoint: null
-    license: "dl-de-by-2.0"
-    year: null
-    verified: false
-    field_map:
-      plr_id: null
-      pop_total: null
-      pop_65plus: null
-      pop_80plus: null
-      pop_0to6: null
+    url: "https://www.statistik-berlin-brandenburg.de/opendata/EWR_L21_202512E_Matrix.csv"
+    license: "CC-BY（Amt für Statistik Berlin-Brandenburg）"
+    year: 2025
+    verified: true
+    field_map: {}   # 下载后 inspect 填实（矩阵格式，按年龄列）
 
-  pflege:
-    description: "Pflege-Kernindikatoren（护理需求人口）"
-    type: csv
-    endpoint: null
-    license: null
-    year: null
-    verified: false
-    field_map: {}
+  # Pflege-Kernindikatoren 仅有 Bezirk 级粒度，对 542 个 PLR 无增量信息，
+  # MVP 弃用（敏感维度由 65+/80+ 占比覆盖首要风险人群）。见 NOTES.md。
 
   # ---- 应对能力维度 ---------------------------------------------------
   strassenbaeume:
-    description: "Straßenbäume 行道树点位"
+    description: "Baumbestand Berlin — Straßenbäume（行道树点位）"
     type: wfs
-    endpoint: null
-    layer: null
+    service: baumbestand
+    layer: "baumbestand:strassenbaeume"
+    expected_count: 434765
     license: "dl-de-by-2.0"
-    year: null
-    verified: false
-    field_map: {}
-
-  # ---- 降温点 ---------------------------------------------------------
-  trinkbrunnen:
-    description: "Trinkbrunnen（BWB 公共饮水台，5–10 月运行；Bituma 型为无障碍）"
-    type: wfs
-    endpoint: null
-    layer: null
-    license: null
-    year: null
-    verified: false
+    year: 2025
+    verified: true
+    properties: [bezirk]   # 只取最小属性，点位密度不需要树种详情
     field_map: {}
 
   gruenanlagen:
-    description: "公园与绿地（荫凉避暑点 + 绿地覆盖）"
+    description: "Grünanlagen（公共绿地多边形）"
     type: wfs
-    endpoint: null
-    layer: null
-    license: null
-    year: null
-    verified: false
-    field_map: {}
+    service: gruenanlagen
+    layer: "gruenanlagen:gruenanlagen"
+    expected_count: 2563
+    license: "dl-de-by-2.0"
+    year: 2025
+    verified: true
+    field_map: { name: namenr, area_kataster: katasterfl }
 
-  bibliotheken:
-    description: "公共图书馆（室内避暑点）"
+  # ---- 降温点 ---------------------------------------------------------
+  trinkbrunnen:
+    description: "Trinkwasserbrunnen（BWB 公共饮水台，5–10 月运行）"
     type: wfs
-    endpoint: null
-    layer: null
-    license: null
-    year: null
-    verified: false
-    field_map: {}
+    service: trinkwasserbrunnen
+    layer: "trinkwasserbrunnen:trinkwasserbrunnen"
+    expected_count: 242
+    license: "dl-de-zero-2.0"
+    year: 2025
+    verified: true
+    field_map:
+      kind: trinkbrunnenart    # 含 Bituma（无障碍型），单独打标
+      location: standort
+      restrictions: einschraenkungen
+
+  # 公共图书馆无官方 WFS（2026-07 检索），MVP 降温点先用饮水台+绿地，
+  # 图书馆可选阶段用 OSM Overpass 补充（注意 ODbL 授权注明）。
 
 # =====================================================================
 # 指标 → 维度归属与权重
 # 归一化：各指标在 542 个 Planungsraum 间做百分位归一化到 [0,1]，
-# direction: higher_is_worse 表示值越大脆弱性越高，lower_is_worse 反之。
+# direction: higher_is_worse 表示原值越大脆弱性越高，lower_is_worse 反之。
 # =====================================================================
 indicators:
   exposure:
-    pet_day:            { source: klimaanalyse, weight: 0.4, direction: higher_is_worse }
-    utci_day:           { source: klimaanalyse, weight: 0.3, direction: higher_is_worse }
-    night_cooling_deficit: { source: klimaanalyse, weight: 0.3, direction: higher_is_worse }
+    pet_day:        { source: klima_pet,     weight: 0.4, direction: higher_is_worse }
+    utci_day:       { source: klima_utci,    weight: 0.3, direction: higher_is_worse }
+    night_cooling:  { source: klima_abkuehl, weight: 0.3, direction: lower_is_worse }
 
   sensitivity:
-    share_65plus:       { source: population_age, weight: 0.25, direction: higher_is_worse }
-    share_80plus:       { source: population_age, weight: 0.25, direction: higher_is_worse }
-    share_0to6:         { source: population_age, weight: 0.15, direction: higher_is_worse }
-    child_poverty:      { source: mss, weight: 0.15, direction: higher_is_worse }
-    transfer_income:    { source: mss, weight: 0.20, direction: higher_is_worse }
+    share_65plus:    { source: population_age, weight: 0.20, direction: higher_is_worse }
+    share_80plus:    { source: population_age, weight: 0.25, direction: higher_is_worse }
+    share_0to6:      { source: population_age, weight: 0.10, direction: higher_is_worse }
+    transfer_income: { source: mss, weight: 0.20, direction: higher_is_worse }
+    child_poverty:   { source: mss, weight: 0.15, direction: higher_is_worse }
+    single_parent_children: { source: mss, weight: 0.10, direction: higher_is_worse }
 
   adaptive_capacity_lack:
     street_tree_density: { source: strassenbaeume, weight: 0.4, direction: lower_is_worse }
-    green_share:         { source: gruenanlagen, weight: 0.4, direction: lower_is_worse }
-    dist_to_refuge:      { source: trinkbrunnen, weight: 0.2, direction: higher_is_worse }
+    green_share:         { source: gruenanlagen,   weight: 0.4, direction: lower_is_worse }
+    dist_to_fountain:    { source: trinkbrunnen,   weight: 0.2, direction: higher_is_worse }
 
 # 三维度合成权重（默认等权 — 这是价值判断，见 README 方法说明）
 weights:

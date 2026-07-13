@@ -1,14 +1,46 @@
 # NOTES — 抓取记录、数据怪癖、待办
 
 ## 待办
-- [ ] 阶段 1：逐个数据源请求 GetCapabilities，填实 config 中 verified: false 的条目
-- [ ] Pflege-Kernindikatoren 与人口 CSV 的下载地址待检索
-- [ ] 空调普及率无直接数据 — MVP 留空，README 注明
+- [ ] 人口年龄 CSV：统计局网站 2026 改版（Scrivito SPA），`/opendata/*.csv` 全部
+      返回 HTML 首页。已改从 Wayback Machine 拉 2024-12 存档（EWR_L21_202412E_Matrix），
+      间歇 429 限流，重试中。备用方案：`data/raw/population_age.xlsx`
+      （SB_A01-16-00_2025h02，T2 表有 <6 和 65+，但无 80+ 细分）。
+- [ ] 图书馆：无官方 WFS（2026-07 检索确认）。MVP 降温点 = 饮水台 + 绿地；
+      可选阶段用 OSM Overpass 补图书馆（amenity=library，注意 ODbL 授权注明）。
+- [ ] 空调普及率无直接数据 — MVP 留空，README 注明。
 
-## 数据源核对记录
-（阶段 1 起，每个数据源抓通后在此记录：端点、图层名、要素数、坐标系、字段、年份、怪癖）
+## 数据源核对记录（2026-07-13，全部经 GetCapabilities + resultType=hits 验证）
+
+| key | 服务/图层 | 要素数 | CRS | 关键字段 | 年份 |
+|---|---|---|---|---|---|
+| lor_planungsraum | lor_2021 / a_lor_plr_2021 | 542 ✓ | 25833 | plr_id, plr_name | 2021 |
+| klima_pet | ua_klimaanalyse_2022 / pa_ua_pet_siedlg_2022 | 16217 | 25833 | schl5, pet14h | 2022 |
+| klima_utci | ua_klimaanalyse_2022 / ra_ua_utci_siedlg_2022 | 16217 | 25833 | schl5, utci14h | 2022 |
+| klima_abkuehl | ua_klimaanalyse_2022 / na_ua_abkuehl_siedlg_2022 | 16217 | 25833 | schl5, abkuehlmea | 2022 |
+| mss | mss_2023 / mss2023_indexind_542 | 542 ✓ | 25833 | plr_id, s1..s4 | 2023 |
+| strassenbaeume | baumbestand / strassenbaeume | 434765 ✓ | 25833 | (点位, bezirk) | 2025 |
+| gruenanlagen | gruenanlagen / gruenanlagen | 2563 ✓ | 25833 | namenr, katasterfl | 2025 |
+| trinkbrunnen | trinkwasserbrunnen / trinkwasserbrunnen | 242 ✓ | 25833 | trinkbrunnenart, standort | 2025 |
+
+### 怪癖与决策
+- **气候图层按用地类型分三组**（Siedlung / Verkehr / Grün-Freiflächen）。暴露聚合
+  只用 `_siedlg_`（人住在居住区块）。纯绿地/森林 PLR 可能无 Siedlung 块 → 暴露缺失，
+  保持 NaN 不填零。
+- **MSS 字段**：s1–s4 = Status（比例 %），d1–d4 = Dynamik（两年变化）。排序按
+  2023 报告：s1 失业、s2 单亲家庭儿童（2023 新增，替代长期失业）、s3 转移支付、
+  s4 儿童贫困（U15 SGB II）。已用数值范围抽样验证（s2≈20-24% 符合单亲儿童占比，
+  不可能是长期失业率）。
+- **Pflege-Kernindikatoren 弃用**：只有 Bezirk 级粒度（12 区），对 542 个 PLR
+  无增量信息；首要风险人群由 65+/80+ 占比覆盖。
+- **Baumbestand 有两层**：strassenbaeume（43.5 万）+ anlagenbaeume（52.8 万，
+  公园树）。MVP 按规格只用行道树；anlagenbaeume 可作后续扩展。
+- **WFS 翻页**：gdi.berlin.de 接受 COUNT=10000 + STARTINDEX，未见截断；
+  抓完与 numberMatched 核对一致。
+- **饮水台字段** `trinkbrunnenart` 含型号（Bituma = 无障碍型），`einschraenkungen`
+  含限制说明；运行季节 5–10 月。
+- **年份不齐**：气候 2022、MSS 2023、人口 2024（Wayback）/2025（xlsx）、
+  树木/绿地/饮水台 2025 现势。README 方法说明需逐层注明。
 
 ## 已知约束
 - FIS-Broker / gdi.berlin.de 的 WFS 不能直接喂前端，须离线转 GeoJSON
-- WFS 分页：单次 GetFeature 可能被截断，需按 startIndex 翻页并核对总数
 - 缺失值策略：保留 NaN，归一化时排除，绝不静默填零
