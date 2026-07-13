@@ -1,10 +1,13 @@
 # NOTES — 抓取记录、数据怪癖、待办
 
 ## 待办
-- [ ] 人口年龄 CSV：统计局网站 2026 改版（Scrivito SPA），`/opendata/*.csv` 全部
-      返回 HTML 首页。已改从 Wayback Machine 拉 2024-12 存档（EWR_L21_202412E_Matrix），
-      间歇 429 限流，重试中。备用方案：`data/raw/population_age.xlsx`
-      （SB_A01-16-00_2025h02，T2 表有 <6 和 65+，但无 80+ 细分）。
+- [ ] **share_80plus 暂缺（已决策：MVP 弃用）**。EWR 矩阵 CSV（单岁年龄）在
+      统计局 2026 网站改版（Scrivito SPA）后不可达：`/opendata/*.csv` 对任意
+      路径返回 SPA 首页；Wayback 2025-03 快照本身就是改版后的软 404。
+      现用 `population_age.xlsx`（SB_A01-16-00_2025h02，T2：<6 与 65+，
+      31.12.2025 时点），敏感维度权重已重分配（65+ 0.30）。
+      `indicators.py:population_from_csv` 已就位——若 CSV 恢复，放进
+      `data/raw/population_age.csv` 即自动优先使用并恢复 80+。
 - [ ] 图书馆：无官方 WFS（2026-07 检索确认）。MVP 降温点 = 饮水台 + 绿地；
       可选阶段用 OSM Overpass 补图书馆（amenity=library，注意 ODbL 授权注明）。
 - [ ] 空调普及率无直接数据 — MVP 留空，README 注明。

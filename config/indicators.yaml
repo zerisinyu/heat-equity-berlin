@@ -106,7 +106,8 @@ sources:
     license: "dl-de-by-2.0"
     year: 2025
     verified: true
-    properties: [bezirk]   # 只取最小属性，点位密度不需要树种详情
+    # 只取最小属性集；geom 必须显式列出，否则 WFS 会把几何也过滤掉
+    properties: [bezirk, geom]
     field_map: {}
 
   gruenanlagen:
@@ -151,12 +152,13 @@ indicators:
     night_cooling:  { source: klima_abkuehl, weight: 0.3, direction: higher_is_worse }
 
   sensitivity:
-    share_65plus:    { source: population_age, weight: 0.20, direction: higher_is_worse }
-    share_80plus:    { source: population_age, weight: 0.25, direction: higher_is_worse }
+    # share_80plus 暂缺：EWR 矩阵 CSV（单岁年龄）因统计局网站改版不可达，
+    # xlsx 报告表只有 65+ 细分。数据恢复后在此加回并重分权重（见 NOTES.md）。
+    share_65plus:    { source: population_age, weight: 0.30, direction: higher_is_worse }
     share_0to6:      { source: population_age, weight: 0.10, direction: higher_is_worse }
-    transfer_income: { source: mss, weight: 0.20, direction: higher_is_worse }
-    child_poverty:   { source: mss, weight: 0.15, direction: higher_is_worse }
-    single_parent_children: { source: mss, weight: 0.10, direction: higher_is_worse }
+    transfer_income: { source: mss, weight: 0.25, direction: higher_is_worse }
+    child_poverty:   { source: mss, weight: 0.20, direction: higher_is_worse }
+    single_parent_children: { source: mss, weight: 0.15, direction: higher_is_worse }
 
   adaptive_capacity_lack:
     street_tree_density: { source: strassenbaeume, weight: 0.4, direction: lower_is_worse }

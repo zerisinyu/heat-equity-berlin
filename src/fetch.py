@@ -48,11 +48,22 @@ def fetch_wfs_layer(base: str, service: str, layer: str,
             "COUNT": PAGE_SIZE, "STARTINDEX": start,
         }
         if properties:
-            # 几何字段随 GeoJSON 输出自带，只额外要最小属性集
+            # 注意：PROPERTYNAME 必须包含几何字段（geom），否则返回空几何
             params["PROPERTYNAME"] = ",".join(properties)
-        r = requests.get(_wfs_url(base, service, params), timeout=TIMEOUT)
-        r.raise_for_status()
-        page = r.json()
+        page = None
+        for attempt in range(4):
+            try:
+                r = requests.get(_wfs_url(base, service, params), timeout=TIMEOUT)
+                r.raise_for_status()
+                page = r.json()
+                break
+            except (requests.RequestException, ValueError) as e:
+                if attempt == 3:
+                    raise
+                wait = 10 * (attempt + 1)
+                print(f"    {layer}@{start}: {type(e).__name__}，{wait}s 后重试")
+                import time
+                time.sleep(wait)
         features.extend(page["features"])
         crs = crs or page.get("crs")
         got = len(page["features"])
@@ -63,6 +74,12 @@ def fetch_wfs_layer(base: str, service: str, layer: str,
 
     if len(features) != total:
         raise RuntimeError(f"{layer}: 抓到 {len(features)}，期望 {total} — 不接受截断")
+    if not any(f.get("geometry") for f in features[:5]):
+        raise RuntimeError(f"{layer}: 要素几何为空 — PROPERTYNAME 是否漏了 geom？")
+    if crs is None:
+        # 用 PROPERTYNAME 时响应可能不带 crs 声明；所有图层已经
+        # GetCapabilities 验证为 25833，显式补上，避免被误读成 4326
+        crs = {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::25833"}}
     return {"type": "FeatureCollection", "crs": crs, "features": features}
 
 
