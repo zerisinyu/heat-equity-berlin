@@ -123,5 +123,10 @@ def run(cfg: dict) -> None:
                 print(f"  {key}: 缓存命中（{out.stat().st_size} bytes）")
                 continue
             print(f"  {key}: 下载 {src['url']} …")
-            fetch_csv(src["url"], out)
-            print(f"  {key}: 已缓存 → {out.name}")
+            try:
+                fetch_csv(src["url"], out)
+                print(f"  {key}: 已缓存 → {out.name}")
+            except Exception as e:
+                # 单源失败不中断管线（后续步骤有回退方案），记录后继续
+                print(f"  {key}: 抓取失败 — {e}")
+                print(f"  {key}: 继续（indicators 步骤会回退到 xlsx，见 NOTES.md）")
