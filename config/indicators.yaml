@@ -147,7 +147,8 @@ indicators:
   exposure:
     pet_day:        { source: klima_pet,     weight: 0.4, direction: higher_is_worse }
     utci_day:       { source: klima_utci,    weight: 0.3, direction: higher_is_worse }
-    night_cooling:  { source: klima_abkuehl, weight: 0.3, direction: lower_is_worse }
+    # abkuehlmea 为负值（降温幅度），越接近 0 = 夜里越降不下来 = 越糟
+    night_cooling:  { source: klima_abkuehl, weight: 0.3, direction: higher_is_worse }
 
   sensitivity:
     share_65plus:    { source: population_age, weight: 0.20, direction: higher_is_worse }
