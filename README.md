@@ -1,88 +1,135 @@
-# 柏林热浪不平等地图 / Heat Equity Berlin
+# Heat Equity Berlin
 
-一张街区级（Planungsraum，542 个规划空间）的柏林高温脆弱性地图：
-分级填色显示综合脆弱性指数，叠加可开关的降温点图层（饮水台、公园绿地），
-点击任一街区可见指数拆解——是因为太热、住得脆弱，还是无处可躲。
+A small, reproducible attempt to map **heat vulnerability** across Berlin at the
+neighbourhood level (the 542 *Planungsräume*, Berlin's official planning areas).
 
-这张图想回答两个问题：**哪里的人在高温下最需要优先关照**，以及
-**他们最近的降温点在哪**。它的目标用户是社区照护者、邻里互助网络和
-基层机构——热浪来临前就知道该去敲哪几扇门。
+The map shades each neighbourhood by a combined vulnerability index and lets you
+switch on cool-spot layers — drinking fountains, parks, libraries, and the city's
+official "cool rooms". Click any area to see the score broken down: is it flagged
+because it gets very hot, because vulnerable people live there, or because there's
+nowhere nearby to cool off?
 
-## 复现
+It tries to answer two modest questions: **where might people need attention first
+during a heatwave**, and **where is the nearest relief**. It is meant less as a
+finished product and more as a starting point that others can inspect, question,
+and recompute.
+
+> This is a diagnostic snapshot, not a predictor, and not an authority. The index
+> is built from public data and a set of choices that are all open to challenge.
+> Please read the **"How this map should *not* be read"** section below before
+> drawing conclusions from it.
+
+## Reproducing it
 
 ```bash
 uv sync
-make pipeline   # fetch → process → export，全自动，原始数据缓存于 data/raw
-make serve      # 打开 http://localhost:8000
+make pipeline   # fetch -> process -> export, fully automatic; raw data cached in data/raw
+make serve      # open http://localhost:8000
 ```
 
-单步调试：`uv run python run.py <step>`，step ∈ fetch / geo_base / exposure /
-indicators / index / refuges / export。
+Run a single step for debugging:
 
-## 指数如何构造
+```bash
+uv run python run.py <step>
+# step ∈ fetch / geo_base / exposure / indicators / index / refuges / surfaces / export
+```
 
-公共卫生地理学的标准框架把热脆弱性拆成三个维度：
+The frontend in `web/` is a single static HTML page (MapLibre GL JS) plus the
+exported data, so it can be served by any static host.
 
-| 维度 | 含义 | 底层指标（数据年份） |
+## How the index is built
+
+Public-health geography commonly splits heat vulnerability into three dimensions.
+This project follows that framing:
+
+| Dimension | In plain words | Underlying indicators (data year) |
 |---|---|---|
-| 暴露 | 这里有多热 | PET 14:00、UTCI 14:00、夜间降温幅度（Klimaanalysekarten 2022，Siedlungsflächen 街区块面积加权聚合） |
-| 敏感 | 谁更容易被击垮 | 65+ 占比、0–6 岁占比（2025）；转移支付、儿童贫困、单亲家庭儿童（MSS 2023） |
-| 缺乏应对能力 | 能不能躲 | 行道树密度、公共绿地覆盖率、到最近饮水台距离（2025 现势） |
+| **Exposure** | how hot it gets here | PET 2 pm, UTCI 2 pm, night-time cooling (Klimaanalysekarten 2022, aggregated area-weighted from ~16k settlement blocks) |
+| **Sensitivity** | who is more at risk | share 65+, share under 6 (2025); welfare receipt, child poverty, children in single-parent households (MSS 2023) |
+| **Lack of coping capacity** | how hard it is to find relief | street-tree density, public green-space share, distance to nearest fountain (2025) |
 
-合成方法：每个底层指标在 542 个 Planungsraum 间做**百分位归一化**到 [0,1]
-（1 = 最脆弱方向），维度内加权平均得维度分，三维度加权合成总指数
-（默认等权）。全部权重在 [config/indicators.yaml](config/indicators.yaml)，
-改配置即可重算。
+Each underlying indicator is turned into a **percentile rank** across the 542
+neighbourhoods (so different units become comparable), averaged within its
+dimension, and the three dimensions are then combined — by default with equal
+weights. Every weight lives in [`config/indicators.yaml`](config/indicators.yaml);
+change the file and rerun to recompute.
 
-**缺失值纪律**：缺失保持 NaN，权重在非缺失指标间重归一，绝不填零。
-三个维度分不齐全、或常住人口 < 100 的街区不参与排名（地图上显示为
-"数据不足"）——货运场站和森林没有"脆弱性"可言。
+**On missing data:** missing values are kept as missing (never silently filled
+with zero); weights are re-normalised over the indicators that *are* present.
+Neighbourhoods that lack a full set of dimension scores, or have fewer than 100
+residents, are left unranked and shown as "insufficient data" — a freight yard or
+a forest has no meaningful "vulnerability".
 
-## 权重是价值判断，不是客观事实
+## The weights are a value judgement, not a fact
 
-默认三维度等权是一种**取舍**而非真相。我们跑了 4 组权重情景
-（等权 / 暴露加重 / 敏感加重 / 应对加重）做敏感性检验：前 20 名重叠
-15–17/20，**11 个街区在全部情景下都进入最需关照的前 20**（名单见
-[NOTES.md](NOTES.md)）。地图上可勾选单独标出这批街区——只有这个
-子集的结论是对权重选择稳健的，其余排名请当作参考而非定论。
+Weighting the three dimensions equally is a **choice**, not a truth. To see how
+much that choice matters, the pipeline recomputes the index under four weighting
+scenarios (equal / exposure-heavy / sensitivity-heavy / capacity-heavy). The
+top-20 most-vulnerable lists overlap by 15–17 out of 20, and **11 neighbourhoods
+land in the most-affected group under every scenario** (listed in
+[NOTES.md](NOTES.md)). The map can highlight just those 11 — only that subset is
+robust to the weighting choice. Treat the rest of the ranking as indicative, not
+definitive.
 
-## 如何不该解读这张地图
+## How this map should *not* be read
 
-- **街区平均值 ≠ 个体命运**。气候块聚合到 Planungsraum 抹掉了内部差异，
-  一个街区的平均 PET 掩盖了里面最热的那栋顶层老楼（生态谬误）。
-- **这不是"问题街区"名单**。指数标示的是高温下需要优先送达帮助的地方，
-  不是社区的缺陷评分。任何把它用于房价、保险或污名化的解读都是误用。
-- **数据年份不齐**：气候 2022、社会监测 2023、人口 2025、绿化 2025。
-  它们不是同一时点的快照。
-- **已知缺口**：80+ 高龄占比因统计局网站改版暂缺（用 65+ 代替，权重
-  已调整）；空调普及率无直接数据，未纳入。详见 [NOTES.md](NOTES.md) 待办。
-- 指数构造中的每一步（归一化方式、权重、最低人口门槛）都可质疑、
-  可复算——这正是把它全部开源的原因。
+- **A neighbourhood average is not any individual's fate.** Aggregating climate
+  blocks to a whole neighbourhood erases what happens inside it; the average hides
+  the hottest top-floor flat on the block (the ecological fallacy).
+- **This is not a list of "problem areas."** The index points to where help might
+  be sent first, not to a deficiency score for a community. Using it for property
+  prices, insurance, or stigma would be a misuse.
+- **The data years don't line up.** Climate is 2022, social monitoring 2023,
+  population 2025, greenery 2025. They are not a single snapshot in time.
+- **Known gaps.** The 80+ age share is currently missing (the statistics office
+  changed its site; 65+ is used instead and weights adjusted). Air-conditioning
+  access has no direct data and is not included. See [NOTES.md](NOTES.md).
+- Every step in the construction — the normalisation method, the weights, the
+  minimum-population cutoff — is open to question and recomputation. That is the
+  whole reason the code is public.
 
-## 数据来源与授权
+## Data sources & licences
 
-全部来自柏林官方开放数据（[gdi.berlin.de](https://gdi.berlin.de) WFS /
-[daten.berlin.de](https://daten.berlin.de)），逐图层端点、字段与年份见
-[config/indicators.yaml](config/indicators.yaml) 与 [NOTES.md](NOTES.md)：
+Everything comes from Berlin's official open data ([gdi.berlin.de](https://gdi.berlin.de)
+WFS / [daten.berlin.de](https://daten.berlin.de)). Per-layer endpoints, fields,
+and years are documented in [`config/indicators.yaml`](config/indicators.yaml)
+and [NOTES.md](NOTES.md).
 
 - LOR Planungsräume 2021 — CC-BY-3.0-DE
-- Klimaanalysekarten 2022（Umweltatlas）— dl-de/by-2-0
+- Klimaanalysekarten 2022 (Umweltatlas) — dl-de/by-2-0
 - Monitoring Soziale Stadtentwicklung 2023 — dl-de/by-2-0
-- Baumbestand（Straßenbäume）、Grünanlagen — dl-de/by-2-0
-- Trinkwasserbrunnen（Berliner Wasserbetriebe）— dl-de/zero-2-0
-- Kühle Räume / Hitzeschutz（官方避暑室内场所，111 个）— dl-de/by-2-0
-- 公共图书馆点位 — © OpenStreetMap contributors，ODbL（官方无此数据集）
-- 人口：Amt für Statistik Berlin-Brandenburg，SB A I 16 hj（31.12.2025）— CC-BY
+- Baumbestand (Straßenbäume), Grünanlagen — dl-de/by-2-0
+- Trinkwasserbrunnen (Berliner Wasserbetriebe) — dl-de/zero-2-0
+- Kühle Räume / Hitzeschutz (official indoor cool rooms, 111 sites) — dl-de/by-2-0
+- Public library locations — © OpenStreetMap contributors, ODbL (no official dataset exists)
+- Population: Amt für Statistik Berlin-Brandenburg, SB A I 16 hj (31 Dec 2025) — CC-BY
 
-基础底图 © OpenStreetMap 贡献者 © CARTO。
+Basemap © OpenStreetMap contributors © CARTO.
 
-## 结构
+With gratitude to the public servants and open-data teams in Berlin who publish and
+maintain these datasets — this project is only possible because that work exists.
+
+## Layout
 
 ```
-src/            管线各步骤（fetch → geo_base → exposure → indicators → index → refuges → export）
-config/         数据源、字段映射、全部权重
-web/            单页地图（MapLibre GL JS）
-data/raw        原始抓取缓存（不进 git）
-data/processed  中间产物与检查图
-NOTES.md        抓取记录、数据怪癖、敏感性检验结论
+src/            pipeline steps (fetch -> geo_base -> exposure -> indicators
+                -> index -> refuges -> surfaces -> export)
+config/         data sources, field mappings, all weights
+web/            single-page map (MapLibre GL JS) + exported data
+data/raw        cached raw downloads (git-ignored)
+data/processed  intermediate outputs and check figures (git-ignored)
+NOTES.md        fetch log, data quirks, sensitivity-analysis findings
 ```
+
+## A note on scope
+
+This was built as a learning project and a proof of concept. The code favours
+clarity and honesty about its data over polish, and there is plenty it does not do
+(no real-time temperature, no forecasting, no indoor microclimate). Corrections and
+questions about the method are very welcome.
+
+## Licence
+
+Code released under the MIT Licence. The underlying datasets keep their own
+licences as listed above; if you reuse the data, please attribute the original
+providers accordingly.
