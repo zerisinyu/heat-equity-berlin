@@ -6,3 +6,6 @@ __pycache__/
 .venv/
 *.pyc
 .DS_Store
+
+# 本地学习文档，不入库
+WALKTHROUGH.html
