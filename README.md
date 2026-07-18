@@ -14,6 +14,8 @@ during a heatwave**, and **where is the nearest relief**. It is meant less as a
 finished product and more as a starting point that others can inspect, question,
 and recompute.
 
+**Live map:** https://zerisinyu.github.io/heat-equity-berlin/
+
 > This is a diagnostic snapshot, not a predictor, and not an authority. The index
 > is built from public data and a set of choices that are all open to challenge.
 > Please read the **"How this map should *not* be read"** section below before
