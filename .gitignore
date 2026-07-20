@@ -9,3 +9,6 @@ __pycache__/
 
 # 本地学习文档，不入库
 WALKTHROUGH.html
+
+# Claude Code local config
+.claude/
